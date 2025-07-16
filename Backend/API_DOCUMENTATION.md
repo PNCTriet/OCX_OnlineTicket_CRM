@@ -587,4 +587,299 @@ curl -X POST http://localhost:3000/auth/logout \
 
 ---
 
+## 6. Orders API
+
+> **Core business logic** - Tạo đơn hàng, kiểm tra tồn kho, quản lý trạng thái. (Yêu cầu JWT)
+
+### 6.1. Tạo đơn hàng
+
+#### Endpoint
+- **POST** `/orders`
+
+#### Header
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+#### Request Body
+```json
+{
+  "organization_id": "org_cuid",
+  "event_id": "event_cuid",
+  "items": [
+    {
+      "ticket_id": "ticket_cuid",
+      "quantity": 2
+    },
+    {
+      "ticket_id": "ticket_cuid_2", 
+      "quantity": 1
+    }
+  ]
+}
+```
+
+#### Response
+- Nếu thành công:
+```json
+{
+  "id": "order_cuid",
+  "user_id": "user_cuid",
+  "organization_id": "org_cuid",
+  "event_id": "event_cuid",
+  "total_amount": 2500000,
+  "status": "PENDING",
+  "reserved_until": "2025-07-15T10:30:00.000Z",
+  "created_at": "2025-07-15T10:15:00.000Z",
+  "updated_at": "2025-07-15T10:15:00.000Z"
+}
+```
+
+#### Logic nghiệp vụ:
+- ✅ **Kiểm tra tồn kho:** `ticket.total_qty - ticket.sold_qty >= quantity`
+- ✅ **Kiểm tra trạng thái:** Ticket phải có status = "ACTIVE"
+- ✅ **Tính tổng tiền:** Tự động tính dựa trên `ticket.price * quantity`
+- ✅ **Transaction:** Đảm bảo consistency khi tạo order + cập nhật sold_qty
+- ✅ **Tạm giữ vé:** `reserved_until = now + 15 phút`
+- ✅ **Cập nhật sold_qty:** Tăng số lượng đã bán ngay khi tạo order
+
+#### Test cURL
+```sh
+curl -X POST http://localhost:3000/orders \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "organization_id": "org_cuid",
+    "event_id": "event_cuid", 
+    "items": [
+      {"ticket_id": "ticket_cuid", "quantity": 2}
+    ]
+  }'
+```
+
+---
+
+### 6.2. Xem chi tiết đơn hàng
+
+#### Endpoint
+- **GET** `/orders/:id`
+
+#### Header
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+#### Response
+```json
+{
+  "id": "order_cuid",
+  "user_id": "user_cuid",
+  "organization_id": "org_cuid",
+  "event_id": "event_cuid",
+  "total_amount": 2500000,
+  "status": "PENDING",
+  "reserved_until": "2025-07-15T10:30:00.000Z",
+  "created_at": "2025-07-15T10:15:00.000Z",
+  "updated_at": "2025-07-15T10:15:00.000Z",
+  "user": {
+    "id": "user_cuid",
+    "email": "user@example.com",
+    "first_name": "Nguyen",
+    "last_name": "Van A"
+  },
+  "organization": {
+    "id": "org_cuid",
+    "name": "Howls Studio"
+  },
+  "event": {
+    "id": "event_cuid",
+    "title": "Sự kiện âm nhạc Howls"
+  },
+  "order_items": [
+    {
+      "id": "order_item_cuid",
+      "ticket_id": "ticket_cuid",
+      "quantity": 2,
+      "price": 1000000,
+      "ticket": {
+        "id": "ticket_cuid",
+        "name": "Vé VIP",
+        "description": "Ghế VIP gần sân khấu"
+      }
+    }
+  ]
+}
+```
+
+#### Test cURL
+```sh
+curl -X GET http://localhost:3000/orders/order_cuid \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+---
+
+### 6.3. Huỷ đơn hàng
+
+#### Endpoint
+- **POST** `/orders/:id/cancel**
+
+#### Header
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+#### Response
+- Nếu thành công:
+```json
+{
+  "message": "Order cancelled successfully"
+}
+```
+
+#### Logic nghiệp vụ:
+- ✅ **Kiểm tra trạng thái:** Chỉ cho phép cancel khi status = "PENDING" hoặc "RESERVED"
+- ✅ **Hoàn trả vé:** Giảm `ticket.sold_qty` về số lượng ban đầu
+- ✅ **Transaction:** Đảm bảo consistency khi hoàn trả vé + cập nhật status
+- ✅ **Cập nhật status:** Đổi thành "CANCELLED"
+
+#### Test cURL
+```sh
+curl -X POST http://localhost:3000/orders/order_cuid/cancel \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+---
+
+### 6.4. Danh sách đơn hàng
+
+#### Endpoint
+- **GET** `/orders`
+
+#### Header
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+#### Response
+```json
+[
+  {
+    "id": "order_cuid",
+    "user_id": "user_cuid",
+    "organization_id": "org_cuid",
+    "total_amount": 2500000,
+    "status": "PENDING",
+    "reserved_until": "2025-07-15T10:30:00.000Z",
+    "created_at": "2025-07-15T10:15:00.000Z",
+    "user": { ... },
+    "organization": { ... },
+    "event": { ... },
+    "order_items": [ ... ]
+  }
+]
+```
+
+#### Test cURL
+```sh
+curl -X GET http://localhost:3000/orders \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+---
+
+### 6.5. Error Handling
+
+#### Ticket không tồn tại:
+```json
+{
+  "statusCode": 404,
+  "message": "Ticket ticket_cuid not found"
+}
+```
+
+#### Ticket không active:
+```json
+{
+  "statusCode": 400,
+  "message": "Ticket Vé VIP is not active"
+}
+```
+
+#### Không đủ vé:
+```json
+{
+  "statusCode": 400,
+  "message": "Insufficient tickets for Vé VIP"
+}
+```
+
+#### Order không tồn tại:
+```json
+{
+  "statusCode": 404,
+  "message": "Order order_cuid not found"
+}
+```
+
+#### Không thể huỷ order:
+```json
+{
+  "statusCode": 400,
+  "message": "Cannot cancel order with status PAID"
+}
+```
+
+---
+
+### 6.6. Trạng thái đơn hàng (OrderStatus)
+
+| Status | Mô tả | Có thể cancel? |
+|--------|-------|----------------|
+| **PENDING** | Đơn hàng mới tạo, chưa thanh toán | ✅ |
+| **RESERVED** | Đã tạm giữ vé, chờ thanh toán | ✅ |
+| **PAID** | Đã thanh toán thành công | ❌ |
+| **CANCELLED** | Đã huỷ đơn hàng | ❌ |
+| **EXPIRED** | Hết hạn tạm giữ (15 phút) | ❌ |
+
+---
+
+### 6.7. Case test thực tế
+
+#### Tạo đơn hàng mới:
+```sh
+curl -X POST http://localhost:3000/orders \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "organization_id": "org_cuid",
+    "event_id": "event_cuid",
+    "items": [
+      {"ticket_id": "ticket_cuid", "quantity": 2}
+    ]
+  }'
+```
+
+#### Xem chi tiết đơn hàng:
+```sh
+curl -X GET http://localhost:3000/orders/order_cuid \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Huỷ đơn hàng:
+```sh
+curl -X POST http://localhost:3000/orders/order_cuid/cancel \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Xem danh sách đơn hàng:
+```sh
+curl -X GET http://localhost:3000/orders \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+---
+
+### 6.8. Lưu ý quan trọng
+
+- **Tạm giữ vé:** Order được tạm giữ 15 phút, sau đó tự động huỷ nếu chưa thanh toán
+- **Transaction:** Tất cả thao tác tạo/huỷ order đều sử dụng database transaction
+- **Concurrent access:** Hệ thống xử lý được nhiều user cùng mua vé (tránh oversell)
+- **Inventory check:** Kiểm tra tồn kho nghiêm ngặt trước khi tạo order
+- **Hoàn trả vé:** Khi huỷ order, số lượng vé được hoàn trả về ban đầu
+
+---
+
 ## [Các module khác sẽ bổ sung tại đây] 

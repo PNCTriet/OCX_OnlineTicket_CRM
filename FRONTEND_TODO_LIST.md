@@ -8,10 +8,10 @@
 
 ## 2. Xây dựng hệ thống xác thực (Auth)
 - [x] Trang đăng nhập (login) - **ĐÃ HOÀN THÀNH**
-- [ ] Tích hợp Supabase Auth hoặc backend JWT
-- [ ] Lưu token, thông tin user, roles, organizations
-- [ ] Middleware kiểm tra đăng nhập, redirect nếu chưa login
-- [ ] Hiển thị thông tin user, vai trò, tổ chức hiện tại trên header
+- [x] Tích hợp Supabase Auth hoặc backend JWT
+- [x] Lưu token, thông tin user, roles, organizations
+- [x] Middleware kiểm tra đăng nhập, redirect nếu chưa login
+- [x] Hiển thị thông tin user, vai trò, tổ chức hiện tại trên header (đang làm tiếp)
 - [ ] Dropdown chuyển đổi organization (nếu user thuộc nhiều tổ chức)
 
 ## 3. Dashboard (Tổng quan)
@@ -19,19 +19,19 @@
 - [ ] Biểu đồ doanh thu, số vé bán, số sự kiện (dùng chart mock)
 
 ## 4. Module Tổ chức (Organizations)
-- [ ] Trang danh sách tổ chức (table, filter)
+- [x] Trang danh sách tổ chức (table, filter) - **ĐÃ CÓ TRANG /organizations, TABLE LẤY MẪU TỪ BASIC-TABLES.HTML, CALL API /organizations**
 - [ ] Form tạo/sửa tổ chức (modal/drawer)
 - [ ] Xoá tổ chức (confirm dialog)
 - [ ] Upload logo tổ chức (mock)
 
 ## 5. Module Người dùng (Users)
-- [ ] Trang danh sách user (table, filter, phân trang)
+- [x] Trang danh sách user (table, filter, phân trang) - **ĐÃ CÓ TRANG /users, TABLE LẤY MẪU TỪ BASIC-TABLES.HTML, CALL API /users**
 - [ ] Thêm user (form, gán vai trò, mời qua email - mock)
 - [ ] Sửa/xoá user
 - [ ] Hiển thị trạng thái, vai trò user
 
 ## 6. Module Sự kiện (Events)
-- [ ] Trang danh sách sự kiện (table, filter theo tổ chức)
+- [x] Trang danh sách sự kiện (table, filter) - **ĐÃ CÓ TRANG /events, TABLE LẤY MẪU TỪ BASIC-TABLES.HTML, CALL API /events**
 - [ ] Tạo/sửa/xoá sự kiện (form, upload banner)
 - [ ] Hiển thị số vé đã bán, trạng thái sự kiện
 
@@ -85,6 +85,9 @@
 - **Cấu trúc thư mục**: Đầy đủ components, types, mocks, utils, modules, hooks, lib
 - **Data mẫu**: Users và Organizations JSON
 - **Routing**: Redirect từ `/` đến `/dashboard`
+- **Auth flow**: Đã có flow đăng nhập chuẩn, lưu token, chặn truy cập trái phép, redirect hợp lý
+- **Danh sách tổ chức**: Đã có trang /organizations, table chuẩn, call API
+- **Danh sách user**: Đã có trang /users, table chuẩn, call API
 
 ### 🔄 Đang thực hiện:
 - Cần hoàn thiện các module CRUD (Organizations, Users, Events, Tickets, Orders, Check-in)
@@ -98,5 +101,6 @@
 ---
 **Ghi chú:**
 - Phase 1 đã hoàn thành: Setup project + Layout TailAdmin + Dashboard cơ bản
+- Đã có flow xác thực chuẩn, chặn truy cập trái phép, redirect hợp lý.
 - Ưu tiên hoàn thiện UI/UX với data mẫu, sau đó tích hợp API thật khi backend sẵn sàng.
 - Có thể bổ sung dashboard nâng cao, quản lý webhook, cấu hình payment, ... về sau. 
