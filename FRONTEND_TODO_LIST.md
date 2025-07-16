@@ -3,19 +3,19 @@
 ## 1. Khởi tạo dự án & cấu hình cơ bản
 - [x] Khởi tạo project Next.js (TypeScript)
 - [x] Cài đặt Tailwind CSS, cấu hình theme
-- [x] Tích hợp template TailAdmin (import layout, sidebar, header)
 - [x] Thiết lập cấu trúc thư mục chuẩn (components, modules, mocks, utils, ...)
+- [x] Tích hợp template TailAdmin (import layout, sidebar, header) - **ĐÃ HOÀN THÀNH**
 
 ## 2. Xây dựng hệ thống xác thực (Auth)
+- [x] Trang đăng nhập (login) - **ĐÃ HOÀN THÀNH**
 - [ ] Tích hợp Supabase Auth hoặc backend JWT
-- [ ] Trang đăng nhập (login)
 - [ ] Lưu token, thông tin user, roles, organizations
 - [ ] Middleware kiểm tra đăng nhập, redirect nếu chưa login
 - [ ] Hiển thị thông tin user, vai trò, tổ chức hiện tại trên header
 - [ ] Dropdown chuyển đổi organization (nếu user thuộc nhiều tổ chức)
 
 ## 3. Dashboard (Tổng quan)
-- [ ] Trang dashboard: thống kê tổng quan (mock data)
+- [x] Trang dashboard: thống kê tổng quan (mock data) - **ĐÃ HOÀN THÀNH**
 - [ ] Biểu đồ doanh thu, số vé bán, số sự kiện (dùng chart mock)
 
 ## 4. Module Tổ chức (Organizations)
@@ -56,7 +56,7 @@
 - [ ] Đăng xuất
 
 ## 11. Data mẫu & State
-- [ ] Tạo file JSON data mẫu cho từng module (organizations, users, events, tickets, orders, checkin)
+- [x] Tạo file JSON data mẫu cho từng module (organizations, users, events, tickets, orders, checkin) - **ĐÃ HOÀN THÀNH**
 - [ ] Kết nối CRUD UI với data mẫu (local state hoặc localStorage)
 
 ## 12. Phân quyền UI
@@ -64,6 +64,7 @@
 - [ ] Middleware kiểm tra quyền khi truy cập trang
 
 ## 13. UI/UX & Responsive
+- [x] Dark mode toggle - **ĐÃ HOÀN THÀNH**
 - [ ] Responsive cho mobile/tablet
 - [ ] Loading, empty state, error state cho các bảng dữ liệu
 - [ ] Toast/thông báo khi thao tác thành công/thất bại
@@ -73,7 +74,29 @@
 - [ ] Định nghĩa interface/type cho data thực tế
 - [ ] Đánh dấu các nơi cần thay thế mock data bằng API
 
+## 📊 TÌNH HÌNH HIỆN TẠI (Cập nhật: 2024)
+
+### ✅ Đã hoàn thành:
+- **Project setup**: Next.js 15.4.1 + TypeScript + Tailwind CSS v4
+- **Trang đăng nhập**: UI hoàn chỉnh với dark mode, responsive
+- **Dark mode**: Toggle button và localStorage persistence
+- **Layout TailAdmin**: Sidebar, Header, DashboardLayout hoàn chỉnh
+- **Dashboard**: Trang dashboard với 4 cards thống kê
+- **Cấu trúc thư mục**: Đầy đủ components, types, mocks, utils, modules, hooks, lib
+- **Data mẫu**: Users và Organizations JSON
+- **Routing**: Redirect từ `/` đến `/dashboard`
+
+### 🔄 Đang thực hiện:
+- Cần hoàn thiện các module CRUD (Organizations, Users, Events, Tickets, Orders, Check-in)
+
+### ⏳ Cần làm tiếp:
+- Tích hợp authentication thật
+- Xây dựng các module CRUD
+- Responsive design
+- Loading states và error handling
+
 ---
 **Ghi chú:**
+- Phase 1 đã hoàn thành: Setup project + Layout TailAdmin + Dashboard cơ bản
 - Ưu tiên hoàn thiện UI/UX với data mẫu, sau đó tích hợp API thật khi backend sẵn sàng.
 - Có thể bổ sung dashboard nâng cao, quản lý webhook, cấu hình payment, ... về sau. 

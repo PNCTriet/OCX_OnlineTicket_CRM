@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "name": "OCX Event Management",
+    "logo": "/images/logo/logo.svg",
+    "domain": "ocx.com",
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "2",
+    "name": "Tech Conference 2024",
+    "logo": "/images/brand/brand-01.svg",
+    "domain": "techconf2024.com",
+    "createdAt": "2024-01-15T00:00:00Z",
+    "updatedAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "3",
+    "name": "Music Festival",
+    "logo": "/images/brand/brand-02.svg",
+    "domain": "musicfestival.com",
+    "createdAt": "2024-02-01T00:00:00Z",
+    "updatedAt": "2024-02-01T00:00:00Z"
+  }
+] 
