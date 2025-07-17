@@ -2,10 +2,31 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { API_BASE_URL } from '@/lib/apiConfig';
+import Image from 'next/image';
+import { IconUser } from '@tabler/icons-react';
 
 interface User {
   [key: string]: any;
 }
+
+// Helper Avatar component để fallback khi lỗi
+const AvatarImg = ({ src, alt }: { src?: string, alt?: string }) => {
+  const [imgSrc, setImgSrc] = useState(src);
+  return imgSrc ? (
+    <Image
+      src={imgSrc}
+      alt={alt || 'Avatar'}
+      width={40}
+      height={40}
+      className="rounded-full object-cover bg-gray-200"
+      onError={() => setImgSrc('/images/user/owner.jpg')}
+    />
+  ) : (
+    <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700">
+      <IconUser className="w-6 h-6 text-gray-400 dark:text-gray-300" />
+    </span>
+  );
+};
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -42,6 +63,7 @@ export default function UsersPage() {
         return 'bg-gray-500 text-white';
     }
   };
+  // Badge màu cho role
   const roleColor = (role?: string) => {
     switch ((role || '').toUpperCase()) {
       case 'SUPERADMIN':
@@ -55,9 +77,24 @@ export default function UsersPage() {
         return 'bg-gray-500 text-white';
     }
   };
+  // Badge màu cho is_verified
+  const verifiedColor = (v?: boolean) => v ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
 
-  // Lấy tất cả key của user để render bảng động
-  const columns = users.length > 0 ? Object.keys(users[0]) : [];
+  // Chỉ định thứ tự và nhãn cột đẹp
+  const columns = [
+    // { key: 'id', label: 'ID' },
+    // { key: 'supabase_id', label: 'Supabase ID' },
+    { key: 'email', label: 'Email' },
+    { key: 'avatar_url', label: 'Avatar' },
+    { key: 'first_name', label: 'First Name' },
+    { key: 'last_name', label: 'Last Name' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'role', label: 'Role' },
+    { key: 'is_verified', label: 'Verified' },
+    { key: 'created_at', label: 'Created At' },
+    { key: 'updated_at', label: 'Updated At' },
+    
+  ];
 
   return (
     <DashboardLayout>
@@ -80,7 +117,7 @@ export default function UsersPage() {
                   <thead>
                     <tr className="border-gray-100 border-y dark:border-gray-800">
                       {columns.map(col => (
-                        <th key={col} className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">{col}</th>
+                        <th key={col.key} className="py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">{col.label}</th>
                       ))}
                     </tr>
                   </thead>
@@ -88,19 +125,19 @@ export default function UsersPage() {
                     {users.map((user, idx) => (
                       <tr key={user.id || idx}>
                         {columns.map(col => (
-                          <td key={col} className="py-3 px-4 text-gray-800 dark:text-white/90">
-                            {col.toLowerCase() === 'role' ? (
-                              <span className={`rounded-full px-2 py-0.5 text-theme-xs font-medium ${roleColor(user[col])}`}>
-                                {user[col] || 'USER'}
-                              </span>
-                            ) : col.toLowerCase() === 'status' ? (
-                              <span className={`rounded-full px-2 py-0.5 text-theme-xs font-medium ${statusColor(user[col])}`}>
-                                {user[col] || 'ACTIVE'}
-                              </span>
-                            ) : typeof user[col] === 'object' && user[col] !== null ? (
-                              <pre className="text-xs whitespace-pre-wrap break-all">{JSON.stringify(user[col], null, 2)}</pre>
+                          <td key={col.key} className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle">
+                            {col.key === 'avatar_url' ? (
+                              <div className="flex items-center justify-center">
+                                <AvatarImg src={user.avatar_url} alt={user.email} />
+                              </div>
+                            ) : col.key === 'role' ? (
+                              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${roleColor(user.role)}`}>{user.role || 'USER'}</span>
+                            ) : col.key === 'is_verified' ? (
+                              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${verifiedColor(user.is_verified)}`}>{user.is_verified ? 'Verified' : 'Unverified'}</span>
+                            ) : col.key === 'created_at' || col.key === 'updated_at' ? (
+                              <span className="text-xs">{user[col.key] ? new Date(user[col.key]).toLocaleString() : '-'}</span>
                             ) : (
-                              String(user[col] ?? '-')
+                              String(user[col.key] ?? '-')
                             )}
                           </td>
                         ))}

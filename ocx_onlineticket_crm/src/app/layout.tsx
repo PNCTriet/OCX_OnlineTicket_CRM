@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { AuthProvider } from '@/hooks/useAuth';
+import "../app/globals.css";
+//import "../../public/css/style.css";
+import { AuthProvider } from "@/hooks/useAuth";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -18,13 +19,17 @@ export const metadata = {
   description: "CRM Admin for Online Ticketing",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+    <html lang="en" className="dark bg-gray-900">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -37,7 +37,7 @@ export default function OrganizationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-4 mx-auto max-w-screen-2xl md:p-6">
+      <div className="p-4 mx-auto max-w-screen-2xl md:p-6 bg-white dark:bg-gray-900 min-h-screen">
         <h1 className="mb-6 text-2xl font-semibold text-gray-800 dark:text-white/90">Organizations</h1>
         <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <div className="px-5 py-4 sm:px-6 sm:py-5">

@@ -5,30 +5,9 @@ import React, { useState, useEffect } from 'react';
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
-  // Khi load trang, đọc trạng thái darkMode từ localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('darkMode');
-      if (stored !== null) {
-        setDarkMode(JSON.parse(stored));
-      }
-    }
-  }, []);
-
-  // Mỗi khi darkMode thay đổi, cập nhật class và localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (darkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      localStorage.setItem('darkMode', JSON.stringify(darkMode));
-    }
-  }, [darkMode]);
+  // XÓA toàn bộ useEffect darkMode và state darkMode
 
   return (
     <div className="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
@@ -205,20 +184,7 @@ export default function SignupPage() {
           </div>
         </div>
         {/* Dark mode toggler (floating) */}
-        <button
-          className="fixed z-50 hidden bottom-6 right-6 sm:block flex items-center justify-center text-white transition-colors rounded-full w-14 h-14 bg-blue-500 hover:bg-blue-600"
-          onClick={() => setDarkMode((v) => !v)}
-        >
-          {darkMode ? (
-            <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M10 1.54c.41 0 .75.34.75.75v1.25c0 .41-.34.75-.75.75s-.75-.34-.75-.75V2.29c0-.41.34-.75.75-.75Zm.001 5.25A3.21 3.21 0 0 0 6.79 10c0 1.77 1.44 3.21 3.21 3.21 1.77 0 3.21-1.44 3.21-3.21 0-1.77-1.44-3.21-3.21-3.21ZM5.29 10c0-2.6 2.11-4.71 4.71-4.71 2.6 0 4.71 2.11 4.71 4.71 0 2.6-2.11 4.71-4.71 4.71-2.6 0-4.71-2.11-4.71-4.71Zm10.69-4.92a.75.75 0 0 1 1.06 0c.29.29.29.76 0 1.06l-.88.88a.75.75 0 1 1-1.06-1.06l.88-.88ZM18.46 10c0 .41-.34.75-.75.75h-1.25a.75.75 0 0 1 0-1.5h1.25c.41 0 .75.34.75.75Zm-3.54 5.98a.75.75 0 0 1 0 1.06c-.29.29-.76.29-1.06 0l-.88-.88a.75.75 0 1 1 1.06-1.06l.88.88ZM10 15.71c.41 0 .75.34.75.75v1.25c0 .41-.34.75-.75.75s-.75-.34-.75-.75v-1.25c0-.41.34-.75.75-.75Zm-4.04-.61a.75.75 0 0 1-1.06 0c-.29-.29-.29-.76 0-1.06l.88-.88a.75.75 0 1 1 1.06 1.06l-.88.88ZM3.54 10c0 .41.34.75.75.75h1.25a.75.75 0 0 0 0-1.5H4.29a.75.75 0 0 0-.75.75Zm1.06-4.92a.75.75 0 0 1 0-1.06c.29-.29.76-.29 1.06 0l.88.88a.75.75 0 1 1-1.06 1.06l-.88-.88Z" fill="currentColor" />
-            </svg>
-          ) : (
-            <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.45 11.97l.73.19c.09-.32-.05-.66-.29-.83-.29-.17-.65-.13-.89.1l.45.54ZM8.03 2.55l.55.51c.23-.24.27-.6.1-.88-.17-.29-.51-.43-.83-.35l.18.72ZM12.92 13c-3.27 0-5.92-2.65-5.92-5.92h-1.5c0 4.1 3.32 7.42 7.42 7.42V13Zm4.03-1.58c-1.06.98-2.48 1.58-4.03 1.58v1.5c1.95 0 3.72-.75 5.05-1.98l-1.02-1.1Zm-.21.36c-.79 2.98-3.5 5.18-6.73 5.18v1.5c3.93 0 7.23-2.67 8.18-6.29l-1.45-.39ZM10 16.96c-3.84 0-7-3.12-7-6.96H1.54c0 4.67 3.79 8.46 8.46 8.46v-1.5Zm-3-9.87c0-1.56.6-3.33 1.58-4.3l-1.1-1.02C6.25 3.36 5.5 5.13 5.5 7.08h1.5Z" fill="currentColor" />
-            </svg>
-          )}
-        </button>
+        {/* XÓA nút toggle dark mode */}
       </div>
     </div>
   );

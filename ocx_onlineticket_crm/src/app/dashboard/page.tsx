@@ -19,7 +19,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-4 mx-auto max-w-screen-2xl md:p-6">
+      <div className="p-4 mx-auto max-w-screen-2xl md:p-6 bg-white dark:bg-gray-900 min-h-screen">
         <div className="grid grid-cols-12 gap-4 md:gap-6">
           {/* Metric Group One */}
           <div className="col-span-12 xl:col-span-7">

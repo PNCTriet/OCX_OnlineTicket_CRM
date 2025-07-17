@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, createContext, useContext } from 'react';
+import "../../app/globals.css";
+import "../../../public/css/style.css";
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -19,7 +21,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
     return (
         <SidebarContext.Provider value={{sidebarOpen, setSidebarOpen}}>
-            <div className="dark:bg-boxdark-2 flex h-screen w-screen overflow-hidden">
+            <div className="dark:bg-gray-900 bg-white flex h-screen w-screen overflow-hidden">
                 {/* Sidebar - always on the left, full height */}
                 <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
                 {/* Content Area - margin left = sidebar width */}
