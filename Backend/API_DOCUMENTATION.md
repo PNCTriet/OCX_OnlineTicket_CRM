@@ -494,11 +494,45 @@ curl -X POST http://localhost:3000/auth/logout \
 
 ### 4.2. Lấy danh sách sự kiện
 - **GET** `/events`
-- **Response:**
+- **Query Parameters:**
+  - `organization_id` (optional): Lọc sự kiện theo tổ chức
+- **Examples:**
+  - `GET /events` - Lấy tất cả sự kiện
+  - `GET /events?organization_id=org_cuid` - Lấy sự kiện của tổ chức cụ thể
+- **Response (tất cả sự kiện):**
 ```json
 [
   { "id": "...", "title": "...", ... },
   ...
+]
+```
+- **Response (theo organization):**
+```json
+[
+  {
+    "id": "...",
+    "title": "Sự kiện âm nhạc Howls",
+    "description": "Đêm nhạc Howls Studio",
+    "location": "Nhà hát Hòa Bình",
+    "start_date": "2025-08-01T19:00:00.000Z",
+    "end_date": "2025-08-01T22:00:00.000Z",
+    "status": "PUBLISHED",
+    "organization": {
+      "id": "org_cuid",
+      "name": "Howls Studio",
+      "logo_url": "https://howls.studio/logo.png"
+    },
+    "tickets": [
+      {
+        "id": "ticket_cuid",
+        "name": "Vé VIP",
+        "price": 1000000,
+        "total_qty": 100,
+        "sold_qty": 50,
+        "status": "ACTIVE"
+      }
+    ]
+  }
 ]
 ```
 
@@ -573,11 +607,43 @@ curl -X POST http://localhost:3000/auth/logout \
 
 ### 5.2. Lấy danh sách vé
 - **GET** `/tickets`
-- **Response:**
+- **Query Parameters:**
+  - `organization_id` (optional): Lọc vé theo tổ chức
+- **Examples:**
+  - `GET /tickets` - Lấy tất cả vé
+  - `GET /tickets?organization_id=org_cuid` - Lấy vé của tổ chức cụ thể
+- **Response (tất cả vé):**
 ```json
 [
   { "id": "...", "name": "...", ... },
   ...
+]
+```
+- **Response (theo organization):**
+```json
+[
+  {
+    "id": "ticket_cuid",
+    "name": "Vé VIP",
+    "description": "Ghế VIP gần sân khấu",
+    "price": 1000000,
+    "total_qty": 100,
+    "sold_qty": 50,
+    "status": "ACTIVE",
+    "event": {
+      "id": "event_cuid",
+      "title": "Sự kiện âm nhạc Howls",
+      "start_date": "2025-08-01T19:00:00.000Z",
+      "end_date": "2025-08-01T22:00:00.000Z",
+      "location": "Nhà hát Hòa Bình",
+      "status": "PUBLISHED",
+      "organization": {
+        "id": "org_cuid",
+        "name": "Howls Studio",
+        "logo_url": "https://howls.studio/logo.png"
+      }
+    }
+  }
 ]
 ```
 
@@ -915,12 +981,14 @@ curl -X GET http://localhost:3000/orders \
 
 ### 6.8. Lưu ý quan trọng
 
-- **Tạm giữ vé:** Order được tạm giữ 15 phút, sau đó tự động huỷ nếu chưa thanh toán
+- **Tạm giữ vé:** Order được tạm giữ 10 phút, sau đó tự động huỷ nếu chưa thanh toán
 - **Transaction:** Tất cả thao tác tạo/huỷ order đều sử dụng database transaction
 - **Concurrent access:** Hệ thống xử lý được nhiều user cùng mua vé (tránh oversell)
 - **Inventory check:** Kiểm tra tồn kho nghiêm ngặt trước khi tạo order
 - **Hoàn trả vé:** Khi huỷ order, số lượng vé được hoàn trả về ban đầu
-- **⚠️ TODO:** Cần implement scheduled task để tự động chuyển PENDING → EXPIRED sau 15 phút
+- **✅ Scheduled task:** Tự động chuyển PENDING → EXPIRED sau 10 phút (cron job mỗi 5 phút)
+- **✅ QR Code Generation:** Tự động generate QR codes cho từng order item
+- **✅ Order Expiration:** API để expire orders và check expiration status
 
 ---
 
@@ -1057,6 +1125,239 @@ curl -X GET http://localhost:3000/orders \
 ### 6.11. Lưu ý phân quyền
 - Tất cả các API CRUD order_items và payments đều yêu cầu JWT, phân quyền role như API orders.
 - USER chỉ thao tác với order của mình, ADMIN/OWNER/SUPERADMIN thao tác với tất cả.
+
+### 6.13. General Payments API (Suggested)
+
+#### Lấy danh sách tất cả payments với filter
+- **GET** `/payments`
+- **Header:** `Authorization: Bearer <ACCESS_TOKEN>`
+- **Query Parameters:**
+  - `from_date` (optional): Filter from date (YYYY-MM-DD)
+  - `to_date` (optional): Filter to date (YYYY-MM-DD)
+  - `organization_id` (optional): Filter by organization
+  - `status` (optional): Filter by payment status
+  - `payment_method` (optional): Filter by payment method
+  - `page` (optional): Page number for pagination
+  - `limit` (optional): Items per page (default: 20)
+- **Response:**
+```json
+{
+  "payments": [
+    {
+      "id": "payment_id",
+      "order_id": "order_id",
+      "amount": 2000000,
+      "payment_method": "STRIPE",
+      "transaction_id": "txn_123456",
+      "status": "SUCCESS",
+      "created_at": "2025-07-16T19:30:00.000Z",
+      "updated_at": "2025-07-16T19:30:00.000Z",
+      "order": {
+        "user": {
+          "id": "user_id",
+          "email": "user@example.com",
+          "avatar_url": "https://example.com/avatar.jpg"
+        },
+        "organization": {
+          "id": "org_id",
+          "name": "Howls Studio"
+        },
+        "event": {
+          "id": "event_id",
+          "title": "Sự kiện âm nhạc Howls"
+        }
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "total_pages": 5
+  },
+  "summary": {
+    "total_amount": 50000000,
+    "total_payments": 100,
+    "success_rate": 85.5
+  }
+}
+```
+
+#### Thống kê payments theo thời gian
+- **GET** `/payments/stats`
+- **Header:** `Authorization: Bearer <ACCESS_TOKEN>`
+- **Query Parameters:**
+  - `from_date` (optional): Start date (YYYY-MM-DD)
+  - `to_date` (optional): End date (YYYY-MM-DD)
+  - `organization_id` (optional): Filter by organization
+  - `group_by` (optional): Group by day|week|month (default: day)
+- **Response:**
+```json
+{
+  "stats": [
+    {
+      "date": "2025-07-16",
+      "total_amount": 10000000,
+      "total_payments": 50,
+      "success_count": 45,
+      "failed_count": 5
+    }
+  ],
+  "summary": {
+    "total_amount": 50000000,
+    "total_payments": 250,
+    "success_rate": 90.0
+  }
+}
+```
+
+### 6.12. Order Expiration APIs
+
+#### Expire tất cả orders hết hạn
+- **POST** `/orders/expire-expired`
+- **Header:** `Authorization: Bearer <ACCESS_TOKEN>`
+- **Response:**
+```json
+{
+  "message": "Processed 5 expired orders",
+  "expiredCount": 5
+}
+```
+
+#### Kiểm tra order có hết hạn không
+- **GET** `/orders/:id/check-expiration`
+- **Header:** `Authorization: Bearer <ACCESS_TOKEN>`
+- **Response:**
+```json
+{
+  "isExpired": false,
+  "reservedUntil": "2025-07-16T19:43:43.490Z"
+}
+```
+
+---
+
+## 8. QR Code & Check-in API
+
+> **QR Code Generation và Check-in System** - Tự động generate QR codes và xử lý check-in
+
+---
+
+### 8.1. QR Code Generation
+
+#### Tự động generate khi tạo order
+- QR codes được tự động generate khi tạo order
+- Upload lên Supabase Storage với public URL
+- Lưu QR code URL vào `order_item.qr_code`
+
+#### QR Code Data Structure
+```json
+{
+  "orderId": "cmd6ctsyr0001jkhlwwr0dsis",
+  "orderItemId": "item_123",
+  "ticketId": "ticket_456",
+  "quantity": 2,
+  "timestamp": 1640995200000,
+  "hash": "cmd6ctsyr0001jkhlwwr0dsis_item_123_1640995200000_abc123"
+}
+```
+
+---
+
+### 8.2. Check-in với QR Code
+
+#### Verify QR và check-in
+- **POST** `/checkin/verify-qr`
+- **Header:** `Authorization: Bearer <ACCESS_TOKEN>`
+- **Body:**
+```json
+{
+  "qrData": "{\"orderId\":\"cmd6ctsyr0001jkhlwwr0dsis\",\"orderItemId\":\"item_123\",\"ticketId\":\"ticket_456\",\"quantity\":2,\"timestamp\":1640995200000,\"hash\":\"abc123\"}",
+  "checkedBy": "admin@example.com"
+}
+```
+- **Response:**
+```json
+{
+  "success": true,
+  "message": "Check-in successful",
+  "data": {
+    "orderId": "cmd6ctsyr0001jkhlwwr0dsis",
+    "ticketName": "Vé VIP",
+    "eventName": "Sự kiện âm nhạc Howls",
+    "checkinTime": "2025-07-16T19:30:00.000Z",
+    "verifiedBy": "admin@example.com"
+  }
+}
+```
+
+#### Lấy check-in logs
+- **GET** `/checkin/logs?eventId=xxx&orderId=xxx`
+- **Header:** `Authorization: Bearer <ACCESS_TOKEN>`
+- **Response:**
+```json
+[
+  {
+    "id": "checkin_id",
+    "user_id": "user_id",
+    "ticket_id": "ticket_id",
+    "event_id": "event_id",
+    "order_id": "order_id",
+    "order_item_id": "order_item_id",
+    "checkin_time": "2025-07-16T19:30:00.000Z",
+    "verified_by": "admin@example.com",
+    "notes": "QR Code verified: abc123",
+    "user": { "id": "user_id", "email": "user@example.com" },
+    "ticket": { "id": "ticket_id", "name": "Vé VIP" },
+    "event": { "id": "event_id", "title": "Sự kiện âm nhạc Howls" }
+  }
+]
+```
+
+#### Thống kê check-in theo event
+- **GET** `/checkin/stats/:eventId`
+- **Header:** `Authorization: Bearer <ACCESS_TOKEN>`
+- **Response:**
+```json
+{
+  "eventId": "event_id",
+  "totalTickets": 500,
+  "checkedInTickets": 350,
+  "remainingTickets": 150,
+  "checkinRate": "70.00%"
+}
+```
+
+---
+
+### 8.3. Check-in Validation Rules
+
+#### Kiểm tra hợp lệ:
+- ✅ **Order status:** Phải là PAID
+- ✅ **Duplicate prevention:** Không cho check-in 2 lần
+- ✅ **Event timing:** 2 giờ trước/sau event
+- ✅ **QR validation:** Timestamp không quá 24 giờ
+- ✅ **QR format:** Đúng cấu trúc JSON với required fields
+
+#### Error responses:
+```json
+{
+  "statusCode": 400,
+  "message": "Order must be paid before check-in"
+}
+```
+```json
+{
+  "statusCode": 400,
+  "message": "Ticket has already been checked in"
+}
+```
+```json
+{
+  "statusCode": 400,
+  "message": "Check-in period has expired"
+}
+```
 
 ---
 
@@ -1227,20 +1528,20 @@ curl -X POST http://localhost:3000/dashboard/organization/org_cuid/send-report \
 - User & Organization CRUD
 - Event & Ticket Management
 - Order Creation & Management
+- **QR Code Generation & Upload**
+- **Check-in System với QR verification**
+- **Order Expiration System (scheduled task)**
 - Dashboard & Analytics
 - PDF/CSV Export
 - Email Report Sending
 - Swagger UI Integration
 
 ### 🔄 **In Progress:**
-- Order Expiration System (scheduled task)
+- Payment Gateway Integration (Phase 5)
 
 ### ⏳ **Pending:**
-- Payment Gateway Integration
-- QR Code Generation
-- Check-in System
-- Webhook System
-- Unit Testing
+- Webhook System (Phase 9)
+- Unit Testing (Phase 10)
 
 ---
 
@@ -1276,4 +1577,4 @@ npm run start:dev
 
 ---
 
-**🎯 Next Steps:** Implement order expiration system to complete the core business logic. 
+**🎯 Next Steps:** Implement Payment Gateway Integration (Phase 5) và Webhook System (Phase 9) để hoàn thiện hệ thống. 

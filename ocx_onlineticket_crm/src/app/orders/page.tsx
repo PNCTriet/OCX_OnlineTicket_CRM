@@ -12,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import Image from "next/image";
 import OrderDetailModal from "./OrderDetailModal";
+import PaymentDetailModal from "./PaymentDetailModal";
 
 interface Order {
   id: string;
@@ -25,6 +26,8 @@ interface Order {
   event?: { title?: string };
   total_amount: number;
   status: string;
+  payment_status?: string;
+  payment_method?: string;
   reserved_until?: string;
   created_at: string;
   updated_at: string;
@@ -70,6 +73,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedPaymentOrderId, setSelectedPaymentOrderId] = useState<string | null>(null);
 
   // Lấy JWT token từ localStorage hoặc auth context
   const getAuthToken = () => {
@@ -124,7 +128,7 @@ export default function OrdersPage() {
 
   return (
     <DashboardLayout>
-      <div className={selectedOrderId ? "relative filter blur-sm pointer-events-none select-none" : ""}>
+      <div className={(selectedOrderId || selectedPaymentOrderId) ? "relative filter blur-sm pointer-events-none select-none" : ""}>
         <div className="px-[5px] mx-auto w-full md:px-[5px]">
           <h1 className="mb-6 text-2xl font-semibold text-gray-800 dark:text-white/90 flex items-center gap-2">
             <IconShoppingCart className="w-7 h-7 text-blue-500" /> Orders
@@ -148,7 +152,7 @@ export default function OrdersPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="table-fixed w-full min-w-[1100px] divide-y divide-gray-100 dark:divide-gray-800">
+                  <table className="table-fixed w-full min-w-[1300px] divide-y divide-gray-100 dark:divide-gray-800">
                     <thead>
                       <tr className="border-gray-100 border-y dark:border-gray-800">
                         <th className="w-[40px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
@@ -169,13 +173,16 @@ export default function OrdersPage() {
                         <th className="w-[140px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
                           Status
                         </th>
+                        <th className="w-[140px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
+                          Payment
+                        </th>
                         <th className="w-[200px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
                           Reserved Until
                         </th>
                         <th className="w-[200px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
                           Created At
                         </th>
-                        <th className="w-[80px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
+                        <th className="w-[120px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
                           Actions
                         </th>
                       </tr>
@@ -263,6 +270,44 @@ export default function OrdersPage() {
                               </span>
                             )}
                           </td>
+                          <td className="py-3 px-4 align-middle">
+                            {order.payment_status === "COMPLETED" && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-500 text-white">
+                                <IconCheck className="w-4 h-4" />
+                                <span className="font-semibold">Paid</span>
+                              </span>
+                            )}
+                            {order.payment_status === "PENDING" && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-yellow-500 text-white">
+                                <IconClock className="w-4 h-4" />
+                                <span className="font-semibold">Pending</span>
+                              </span>
+                            )}
+                            {order.payment_status === "FAILED" && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-red-500 text-white">
+                                <IconX className="w-4 h-4" />
+                                <span className="font-semibold">Failed</span>
+                              </span>
+                            )}
+                            {order.payment_status === "PROCESSING" && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-500 text-white">
+                                <IconClock className="w-4 h-4" />
+                                <span className="font-semibold">Processing</span>
+                              </span>
+                            )}
+                            {order.payment_status === "REFUNDED" && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-purple-500 text-white">
+                                <IconX className="w-4 h-4" />
+                                <span className="font-semibold">Refunded</span>
+                              </span>
+                            )}
+                            {!order.payment_status && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-400 text-white">
+                                <IconX className="w-4 h-4" />
+                                <span className="font-semibold">N/A</span>
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle">
                             <span className="text-base text-blue-500 dark:text-blue-300">
                               {order.reserved_until
@@ -278,12 +323,20 @@ export default function OrdersPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4 align-middle">
-                            <button
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-sm transition-colors"
-                              onClick={() => setSelectedOrderId(order.id)}
-                            >
-                              View
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-sm transition-colors"
+                                onClick={() => setSelectedOrderId(order.id)}
+                              >
+                                View Detail
+                              </button>
+                              <button
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green-500 hover:bg-green-600 text-white text-xs font-semibold shadow-sm transition-colors"
+                                onClick={() => setSelectedPaymentOrderId(order.id)}
+                              >
+                                Payment Detail
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -299,6 +352,12 @@ export default function OrdersPage() {
         <OrderDetailModal
           orderId={selectedOrderId}
           onClose={() => setSelectedOrderId(null)}
+        />
+      )}
+      {selectedPaymentOrderId && (
+        <PaymentDetailModal
+          orderId={selectedPaymentOrderId}
+          onClose={() => setSelectedPaymentOrderId(null)}
         />
       )}
     </DashboardLayout>

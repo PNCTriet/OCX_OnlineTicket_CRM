@@ -10,6 +10,7 @@ import {
   IconTicket,
   IconShoppingCart,
   IconCheck,
+  IconCreditCard,
 } from '@tabler/icons-react';
 
 interface SidebarProps {
@@ -63,6 +64,12 @@ const menuGroups = [
         title: 'Orders',
         icon: <IconShoppingCart className="w-5 h-5 text-gray-700 dark:text-white" />,
         href: '/orders',
+      },
+      {
+        id: 'payments',
+        title: 'Payments',
+        icon: <IconCreditCard className="w-5 h-5 text-gray-700 dark:text-white" />,
+        href: '/payments',
       },
       {
         id: 'checkin',

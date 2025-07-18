@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'www.otcayxe.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'scontent.fsgn7-2.fna.fbcdn.net',
         port: '',
         pathname: '/**',
