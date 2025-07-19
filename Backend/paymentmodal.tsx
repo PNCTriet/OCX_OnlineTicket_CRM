@@ -256,7 +256,7 @@ export default function PaymentModal({
       console.log('📧 Email subject:', emailData.subject);
 
       // Call our API route to send email
-      const response = await fetch('/api/send-email', {
+              const response = await fetch('/api/send-email-direct', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
