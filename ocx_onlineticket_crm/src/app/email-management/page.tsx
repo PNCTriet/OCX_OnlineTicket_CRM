@@ -4,6 +4,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { API_BASE_URL } from "@/lib/apiConfig";
 import { Tab } from "@headlessui/react";
 import { IconMail, IconTicket, IconCheck, IconX, IconUser, IconQrcode, IconClock, IconSend, IconSquareCheck, IconSearch, IconFilter } from "@tabler/icons-react";
+import { generateTicketQRCode } from "@/lib/qrCodeGenerator";
 import Image from "next/image";
 
 const RESEND_API_KEY = process.env.NEXT_PUBLIC_RESEND_API_KEY;
@@ -15,6 +16,7 @@ interface OrderItem {
   ticket_id: string;
   quantity: number;
   price: number;
+  code?: string; // Ticket code for QR generation
   qr_code?: string;
   ticket?: { name?: string };
 }
@@ -40,26 +42,179 @@ interface User {
   is_verified?: boolean;
 }
 
-// --- Helper: Send email via Next.js API Route ---
-async function sendResendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+// --- Helper: Send email via server-side API route ---
+async function sendResendEmail({ to, subject, html, ticketData }: { to: string; subject: string; html: string; ticketData?: any }) {
   try {
-    const res = await fetch('/api/send-email', {
+    console.log('Sending email to:', to);
+    console.log('Subject:', subject);
+    console.log('Has ticketData:', !!ticketData);
+
+    // Send email via our server-side API route
+    const res = await fetch('/api/send-email-direct', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ to, subject, html }),
+      body: JSON.stringify({
+        to,
+        subject,
+        html,
+        ticketData,
+      }),
     });
+
+    console.log('API response status:', res.status);
+    
     if (!res.ok) {
       const errorData = await res.text();
-      console.error('Email API error:', res.status, errorData);
+      console.error('API error:', res.status, errorData);
       return false;
     }
+
+    const result = await res.json();
+    console.log('Email sent successfully:', result);
     return true;
   } catch (error) {
     console.error('Failed to send email:', error);
     return false;
   }
+}
+
+// Helper function to generate HTML content for ticket
+async function generateTicketHTML(ticketData: any): Promise<string> {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Vé Điện Tử - ${ticketData.eventTitle}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background: white;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          border-bottom: 2px solid #2563eb;
+          padding-bottom: 20px;
+        }
+        .title {
+          font-size: 24px;
+          color: #2563eb;
+          margin: 0;
+        }
+        .subtitle {
+          font-size: 16px;
+          color: #6b7280;
+          margin: 10px 0 0 0;
+        }
+        .section {
+          margin-bottom: 25px;
+        }
+        .section-title {
+          font-size: 18px;
+          font-weight: bold;
+          color: #1f2937;
+          margin-bottom: 15px;
+        }
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          font-size: 12px;
+        }
+        .label {
+          font-weight: bold;
+          color: #374151;
+        }
+        .value {
+          color: #1f2937;
+        }
+        .ticket-item {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 15px;
+          margin-bottom: 10px;
+        }
+        .ticket-name {
+          font-size: 14px;
+          font-weight: bold;
+          color: #1f2937;
+          margin-bottom: 5px;
+        }
+        .ticket-meta {
+          font-size: 10px;
+          color: #6b7280;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #e5e7eb;
+          font-size: 10px;
+          color: #6b7280;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1 class="title">🎫 Vé Điện Tử</h1>
+        <p class="subtitle">Ớt Cay Xè Studio</p>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">📋 Thông Tin Đơn Hàng</h2>
+        <div class="info-row">
+          <span class="label">Mã đơn hàng:</span>
+          <span class="value">${ticketData.orderId}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Sự kiện:</span>
+          <span class="value">${ticketData.eventTitle}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Tổ chức:</span>
+          <span class="value">${ticketData.organizationName}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Khách hàng:</span>
+          <span class="value">${ticketData.user.firstName} ${ticketData.user.lastName}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Email:</span>
+          <span class="value">${ticketData.user.email}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Tổng tiền:</span>
+          <span class="value">${ticketData.totalAmount.toLocaleString('vi-VN')} VND</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Ngày đặt:</span>
+          <span class="value">${new Date(ticketData.createdAt).toLocaleDateString('vi-VN')}</span>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">🎫 Chi Tiết Vé</h2>
+        ${ticketData.orderItems.map((item: any) => `
+          <div class="ticket-item">
+            <div class="ticket-name">${item.ticketName}</div>
+            <div class="ticket-meta">Số lượng: ${item.quantity} | Giá: ${item.price.toLocaleString('vi-VN')} VND</div>
+            ${item.code ? `<div class="ticket-meta">Mã vé: ${item.code}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      
+      <div class="footer">
+        <p>Cảm ơn bạn đã sử dụng dịch vụ của Ớt Cay Xè Studio!</p>
+        <p>Chúc bạn có một trải nghiệm tuyệt vời tại sự kiện.</p>
+      </div>
+    </body>
+    </html>
+  `;
 }
 
 // --- Helper: Update order sending status ---
@@ -278,104 +433,81 @@ export default function EmailManagementPage() {
         failCount++;
         continue;
       }
+      // Generate QR codes for ticket items
+      const orderItemsWithQR = await Promise.all(
+        (order.order_items || []).map(async (item) => {
+          let qrCode = "";
+          if (item.code) {
+            try {
+              qrCode = await generateTicketQRCode(item.code);
+            } catch (error) {
+              console.error('Error generating QR code for item:', item.code, error);
+            }
+          }
+          
+          return {
+            ticketName: item.ticket?.name || "Vé",
+            quantity: item.quantity,
+            price: Number(item.price),
+            code: item.code || "",
+            qrCode: qrCode,
+          };
+        })
+      );
+
+      // Prepare ticket data for PDF generation
+      const ticketData = {
+        orderId: order.id,
+        eventTitle: order.event?.title || "Sự kiện",
+        organizationName: order.organization?.name || "N/A",
+        totalAmount: Number(order.total_amount),
+        createdAt: order.created_at,
+        user: {
+          firstName: order.user?.first_name || "",
+          lastName: order.user?.last_name || "",
+          email: order.user?.email || "",
+        },
+        orderItems: orderItemsWithQR,
+      };
+
       // Compose email
       const subject = `Vé điện tử - ${order.event?.title || "Sự kiện"} - Order #${order.id}`;
-      let html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
-          <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <div style="display: inline-block; margin-bottom: 15px;">
-                <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="120" height="40" rx="8" fill="#2563eb"/>
-                  <text x="60" y="25" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14" font-weight="bold">ỚT CAY XÈ</text>
-                  <text x="60" y="38" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="8">STUDIO</text>
-                </svg>
-              </div>
-              <h1 style="color: #2563eb; margin: 0; font-size: 24px;">🎫 Vé Điện Tử</h1>
-              <p style="color: #6b7280; margin: 10px 0 0 0;">Ớt Cay Xè Studio</p>
-            </div>
-            
-            <div style="margin-bottom: 25px;">
-              <h2 style="color: #1f2937; margin: 0 0 15px 0; font-size: 20px;">Xin chào ${order.user?.first_name || ""} ${order.user?.last_name || ""}!</h2>
-              <p style="color: #374151; line-height: 1.6; margin: 0;">
-                Cảm ơn bạn đã đặt vé cho sự kiện <strong>${order.event?.title || "Sự kiện"}</strong>.
-                Dưới đây là thông tin chi tiết về vé của bạn:
-              </p>
-            </div>
-            
-            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">📋 Thông Tin Đơn Hàng</h3>
-              <div style="margin-bottom: 10px;">
-                <strong>Mã đơn hàng:</strong> <span style="font-family: monospace; background-color: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${order.id}</span>
-              </div>
-              <div style="margin-bottom: 10px;">
-                <strong>Tổ chức:</strong> ${order.organization?.name || "N/A"}
-              </div>
-              <div style="margin-bottom: 10px;">
-                <strong>Tổng tiền:</strong> <span style="color: #059669; font-weight: bold;">${Number(order.total_amount).toLocaleString("vi-VN")} VND</span>
-              </div>
-              <div style="margin-bottom: 10px;">
-                <strong>Ngày đặt:</strong> ${new Date(order.created_at).toLocaleDateString("vi-VN")}
-              </div>
-            </div>
-            
-            <div style="margin-bottom: 25px;">
-              <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">🎫 Chi Tiết Vé</h3>
-              <ul style="list-style: none; padding: 0; margin: 0;">
-      `;
-      
-      for (const item of order.order_items || []) {
-        html += `
-                <li style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                      <h4 style="margin: 0 0 5px 0; color: #1f2937; font-size: 16px;">${item.ticket?.name || "Vé"}</h4>
-                      <p style="margin: 0; color: #6b7280; font-size: 14px;">Số lượng: ${item.quantity} | Giá: ${Number(item.price).toLocaleString("vi-VN")} VND</p>
-                    </div>
-                    <div style="text-align: center;">
-        `;
-        
-        if (item.qr_code) {
-          html += `
-                      <div style="background-color: #ffffff; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
-                        <img src="${item.qr_code}" alt="QR Code" style="width: 80px; height: 80px; display: block;" />
-                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #6b7280;">QR Code</p>
-                      </div>
-          `;
-        }
-        
-        html += `
-                    </div>
-                  </div>
-                </li>
-        `;
-      }
-      
-      html += `
-              </ul>
-            </div>
-            
-            <div style="background-color: #dbeafe; border-left: 4px solid #2563eb; padding: 15px; margin-bottom: 25px;">
-              <h4 style="margin: 0 0 10px 0; color: #1e40af; font-size: 16px;">📱 Hướng Dẫn Sử Dụng</h4>
-              <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
-                <li>Lưu email này để làm bằng chứng đặt vé</li>
-                <li>Hiển thị QR Code khi check-in tại sự kiện</li>
-                <li>Mỗi QR Code chỉ sử dụng được một lần</li>
-                <li>Liên hệ hỗ trợ nếu có vấn đề</li>
-              </ul>
-            </div>
-            
-            <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              <p style="color: #6b7280; margin: 0; font-size: 14px;">
-                Cảm ơn bạn đã sử dụng dịch vụ của <strong>Ớt Cay Xè Studio</strong>!<br>
-                Chúc bạn có một trải nghiệm tuyệt vời tại sự kiện.
-              </p>
-            </div>
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #2563eb; margin: 0; font-size: 24px;">🎫 Vé Điện Tử</h1>
+            <p style="color: #6b7280; margin: 10px 0 0 0;">Ớt Cay Xè Studio</p>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h2 style="color: #1f2937; margin: 0 0 15px 0; font-size: 20px;">Xin chào ${order.user?.first_name || ""} ${order.user?.last_name || ""}!</h2>
+            <p style="color: #374151; line-height: 1.6; margin: 0;">
+              Cảm ơn bạn đã đặt vé cho sự kiện <strong>${order.event?.title || "Sự kiện"}</strong>.
+              Vui lòng xem file PDF đính kèm để xem chi tiết vé của bạn.
+            </p>
+          </div>
+          
+          <div style="background-color: #dbeafe; border-left: 4px solid #2563eb; padding: 15px; margin-bottom: 25px;">
+            <h4 style="margin: 0 0 10px 0; color: #1e40af; font-size: 16px;">📱 Hướng Dẫn Sử Dụng</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
+              <li>Lưu file PDF này để làm bằng chứng đặt vé</li>
+              <li>Hiển thị QR Code khi check-in tại sự kiện</li>
+              <li>Mỗi QR Code chỉ sử dụng được một lần</li>
+              <li>Liên hệ hỗ trợ nếu có vấn đề</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; margin: 0; font-size: 14px;">
+              Cảm ơn bạn đã sử dụng dịch vụ của <strong>Ớt Cay Xè Studio</strong>!<br>
+              Chúc bạn có một trải nghiệm tuyệt vời tại sự kiện.
+            </p>
           </div>
         </div>
       `;
-      // Send
-      const ok = await sendResendEmail({ to: order.user.email, subject, html });
+      
+      // Send email with PDF attachment
+      const ok = await sendResendEmail({ to: order.user.email, subject, html, ticketData });
       updates[oid] = ok ? "success" : "fail";
       setSendingOrder((prev) => ({ ...prev, ...updates }));
       

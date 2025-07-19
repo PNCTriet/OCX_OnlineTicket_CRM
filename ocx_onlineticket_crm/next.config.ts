@@ -46,6 +46,30 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    // Exclude problematic modules from client-side build
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        'chrome-aws-lambda': false,
+        'puppeteer-core': false,
+        puppeteer: false,
+      };
+    }
+
+    // Exclude source maps for problematic packages
+    config.module.rules.push({
+      test: /\.map$/,
+      type: 'ignore',
+    });
+
+    return config;
+  },
+  serverExternalPackages: ['chrome-aws-lambda', 'puppeteer-core'],
 };
 
 export default nextConfig;

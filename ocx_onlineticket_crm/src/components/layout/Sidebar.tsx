@@ -13,6 +13,8 @@ import {
   IconCreditCard,
   IconPlaneInflight,
   IconMail,
+  IconChartBar,
+  IconQrcode,
 } from '@tabler/icons-react';
 
 interface SidebarProps {
@@ -49,6 +51,12 @@ const menuGroups = [
         icon: <IconCalendarEvent className="w-5 h-5 text-gray-700 dark:text-white" />,
         href: '/events',
       },
+      {
+        id: 'charts',
+        title: 'Charts',
+        icon: <IconChartBar className="w-5 h-5 text-gray-700 dark:text-white" />,
+        href: '/charts',
+      },
     ],
   },
   {
@@ -78,6 +86,12 @@ const menuGroups = [
         title: 'Email Management',
         icon: <IconMail className="w-5 h-5 text-gray-700 dark:text-white" />,
         href: '/email-management',
+      },
+      {
+        id: 'ticket-codes',
+        title: 'Qrcode',
+        icon: <IconQrcode className="w-5 h-5 text-gray-700 dark:text-white" />,
+        href: '/ticket-codes',
       },
       {
         id: 'checkin',

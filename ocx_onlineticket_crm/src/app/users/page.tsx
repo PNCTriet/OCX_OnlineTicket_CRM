@@ -1,9 +1,10 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import Image from 'next/image';
-import { IconUser, IconPlus, IconEdit, IconTrash, IconX } from '@tabler/icons-react';
+import { IconUser, IconPlus, IconEdit, IconTrash, IconX, IconCheck } from '@tabler/icons-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface User {
   [key: string]: any;
@@ -39,9 +40,25 @@ const AvatarImg = ({ src, alt }: { src?: string, alt?: string }) => {
 };
 
 export default function UsersPage() {
+  const { user, refreshUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Loading states for CRUD operations
+  const [createLoading, setCreateLoading] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({ open: false, message: '', type: 'success' });
+  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
+  
+  function showToast(message: string, type: 'success' | 'error') {
+    setToast({ open: true, message, type });
+    if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    toastTimeout.current = setTimeout(() => setToast(t => ({ ...t, open: false })), 3000);
+  }
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -64,23 +81,24 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/users`);
-      if (!res.ok) throw new Error('Failed to fetch users');
-      const data = await res.json();
-      setUsers(data);
-    } catch (err: any) {
-      setError(err.message || 'Error fetching users');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchUsers = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE_URL}/users`);
+        if (!res.ok) throw new Error('Failed to fetch users');
+        const data = await res.json();
+        setUsers(data);
+      } catch (err: any) {
+        setError(err.message || 'Error fetching users');
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreateLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/users`, {
         method: 'POST',
@@ -93,10 +111,16 @@ export default function UsersPage() {
       if (!res.ok) throw new Error('Failed to create user');
       
       await fetchUsers();
+      await refreshUser(); // Refresh user data after creating user
       setShowCreateModal(false);
       resetForm();
+      showToast('Tạo user thành công!', 'success');
     } catch (err: any) {
-      setError(err.message || 'Error creating user');
+      const errorMessage = err.message || 'Error creating user';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -104,6 +128,7 @@ export default function UsersPage() {
     e.preventDefault();
     if (!selectedUser) return;
     
+    setUpdateLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/users/${selectedUser.id}`, {
         method: 'PATCH',
@@ -116,16 +141,23 @@ export default function UsersPage() {
       if (!res.ok) throw new Error('Failed to update user');
       
       await fetchUsers();
+      await refreshUser(); // Refresh user data after updating user
       setShowUpdateModal(false);
       resetForm();
+      showToast('Cập nhật user thành công!', 'success');
     } catch (err: any) {
-      setError(err.message || 'Error updating user');
+      const errorMessage = err.message || 'Error updating user';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
+    } finally {
+      setUpdateLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedUser) return;
     
+    setDeleteLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/users/${selectedUser.id}`, {
         method: 'DELETE',
@@ -134,10 +166,16 @@ export default function UsersPage() {
       if (!res.ok) throw new Error('Failed to delete user');
       
       await fetchUsers();
+      await refreshUser(); // Refresh user data after deleting user
       setShowDeleteModal(false);
       setSelectedUser(null);
+      showToast('Xóa user thành công!', 'success');
     } catch (err: any) {
-      setError(err.message || 'Error deleting user');
+      const errorMessage = err.message || 'Error deleting user';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -190,6 +228,9 @@ export default function UsersPage() {
     }
   };
   
+  // Check if current user is superadmin
+  const isSuperAdmin = user?.role === 'SUPERADMIN';
+  
   // Badge màu cho role
   const roleColor = (role?: string) => {
     switch ((role || '').toUpperCase()) {
@@ -204,9 +245,20 @@ export default function UsersPage() {
         return 'bg-gray-500 text-white';
     }
   };
-  
+
   // Badge màu cho is_verified
   const verifiedColor = (v?: boolean) => v ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
+
+  // Toast Notification Component
+  const Toast = ({ open, message, type, onClose }: { open: boolean; message: string; type: 'success' | 'error'; onClose: () => void }) => {
+    if (!open) return null;
+    return (
+      <div className={`fixed top-6 right-6 z-[9999] px-6 py-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+        {message}
+        <button onClick={onClose} className="ml-4 text-white/80 hover:text-white font-bold">×</button>
+      </div>
+    );
+  };
 
   // Chỉ định thứ tự và nhãn cột đẹp
   const columns = [
@@ -226,13 +278,19 @@ export default function UsersPage() {
       <div className="p-4 mx-auto max-w-screen-2xl md:p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Users</h1>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            <IconPlus className="w-4 h-4" />
-            Add User
-          </button>
+          {isSuperAdmin ? (
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <IconPlus className="w-4 h-4" />
+              Add User
+            </button>
+          ) : (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Only Super Admin can manage users
+            </div>
+          )}
         </div>
         
         <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -278,20 +336,26 @@ export default function UsersPage() {
                           </td>
                         ))}
                         <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => openUpdateModal(user)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-                            >
-                              <IconEdit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => openDeleteModal(user)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-red-300 bg-white text-red-700 hover:bg-red-50 hover:border-red-400 dark:border-red-700 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                            >
-                              <IconTrash className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {isSuperAdmin ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => openUpdateModal(user)}
+                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                              >
+                                <IconEdit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => openDeleteModal(user)}
+                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-red-300 bg-white text-red-700 hover:bg-red-50 hover:border-red-400 dark:border-red-700 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                              >
+                                <IconTrash className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-400 dark:text-gray-500">
+                              Read Only
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -303,8 +367,8 @@ export default function UsersPage() {
         </div>
 
         {/* Create Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        {showCreateModal && isSuperAdmin && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Create User</h3>
@@ -418,14 +482,22 @@ export default function UsersPage() {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    disabled={createLoading}
+                    className="flex-1 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 flex items-center justify-center gap-2"
                   >
-                    Create User
+                    {createLoading && (
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                    )}
+                    {createLoading ? 'Đang tạo...' : 'Create User'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                    disabled={createLoading}
+                    className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-60"
                   >
                     Cancel
                   </button>
@@ -436,8 +508,8 @@ export default function UsersPage() {
         )}
 
         {/* Update Modal */}
-        {showUpdateModal && selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        {showUpdateModal && selectedUser && isSuperAdmin && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Update User</h3>
@@ -537,14 +609,22 @@ export default function UsersPage() {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    disabled={updateLoading}
+                    className="flex-1 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 flex items-center justify-center gap-2"
                   >
-                    Update User
+                    {updateLoading && (
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                    )}
+                    {updateLoading ? 'Đang cập nhật...' : 'Update User'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowUpdateModal(false)}
-                    className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                    disabled={updateLoading}
+                    className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-60"
                   >
                     Cancel
                   </button>
@@ -555,8 +635,8 @@ export default function UsersPage() {
         )}
 
         {/* Delete Modal */}
-        {showDeleteModal && selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        {showDeleteModal && selectedUser && isSuperAdmin && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Delete User</h3>
@@ -577,13 +657,21 @@ export default function UsersPage() {
               <div className="flex gap-3">
                 <button
                   onClick={handleDelete}
-                  className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  disabled={deleteLoading}
+                  className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  Delete User
+                  {deleteLoading && (
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                  )}
+                  {deleteLoading ? 'Đang xóa...' : 'Delete User'}
                 </button>
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                  disabled={deleteLoading}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-60"
                 >
                   Cancel
                 </button>
@@ -591,6 +679,14 @@ export default function UsersPage() {
             </div>
           </div>
         )}
+        
+        {/* Toast Notification */}
+        <Toast 
+          open={toast.open} 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(t => ({ ...t, open: false }))} 
+        />
       </div>
     </DashboardLayout>
   );

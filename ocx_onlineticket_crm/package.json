@@ -11,11 +11,18 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
+    "@react-pdf/renderer": "^4.3.0",
     "@supabase/supabase-js": "^2.51.0",
     "@tabler/icons-react": "^3.34.0",
+    "@tremor/react": "^3.18.7",
+    "chrome-aws-lambda": "^10.1.0",
     "next": "15.4.1",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "pdf-lib": "^1.17.1",
+    "puppeteer": "^24.14.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "resend": "^4.7.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

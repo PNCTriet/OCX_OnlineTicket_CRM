@@ -16,6 +16,7 @@ interface AuthContextType {
   login: (data: { access_token: string; refresh_token: string; user: User }) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,22 +26,66 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    const t = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-    const u = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-    if (t && u) {
-      setToken(t);
-      setUser(JSON.parse(u));
+  // Fetch user data from /auth/me API
+  const fetchUserData = async (accessToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.user;
+      } else {
+        throw new Error('Failed to fetch user data');
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return null;
     }
+  };
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const storedToken = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      
+      if (storedToken) {
+        setToken(storedToken);
+        
+        // Fetch fresh user data from API
+        const userData = await fetchUserData(storedToken);
+        if (userData) {
+          setUser(userData);
+          // Update stored user data
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(userData));
+          }
+        } else {
+          // If API call fails, clear auth data
+          logout();
+        }
+      }
+    };
+
+    initializeAuth();
   }, []);
 
-  const login = (data: { access_token: string; refresh_token: string; user: User }) => {
+  const login = async (data: { access_token: string; refresh_token: string; user: User }) => {
     setToken(data.access_token);
-    setUser(data.user);
+    
+    // Fetch fresh user data from API
+    const userData = await fetchUserData(data.access_token);
+    const finalUser = userData || data.user;
+    
+    setUser(finalUser);
+    
     if (typeof window !== 'undefined') {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('user', JSON.stringify(finalUser));
     }
   };
 
@@ -55,10 +100,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const refreshUser = async () => {
+    if (token) {
+      const userData = await fetchUserData(token);
+      if (userData) {
+        setUser(userData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+      }
+    }
+  };
+
   const isAuthenticated = !!token && !!user;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
