@@ -11,6 +11,8 @@ import {
   IconShoppingCart,
   IconCheck,
   IconCreditCard,
+  IconPlaneInflight,
+  IconMail,
 } from '@tabler/icons-react';
 
 interface SidebarProps {
@@ -72,10 +74,22 @@ const menuGroups = [
         href: '/payments',
       },
       {
+        id: 'email-management',
+        title: 'Email Management',
+        icon: <IconMail className="w-5 h-5 text-gray-700 dark:text-white" />,
+        href: '/email-management',
+      },
+      {
         id: 'checkin',
         title: 'Check-in',
         icon: <IconCheck className="w-5 h-5 text-gray-700 dark:text-white" />,
         href: '/checkin',
+      },
+      {
+        id: 'testflight-buy-ticket',
+        title: 'Testflight Mua Vé',
+        icon: <IconPlaneInflight className="w-5 h-5 text-gray-700 dark:text-white" />,
+        href: '/testflight-buy-ticket',
       },
     ],
   },

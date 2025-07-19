@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   images: {
     domains: [
       "scontent.fsgn10-1.fna.fbcdn.net",
+      "api.qrserver.com",
+      "img.vietqr.io",
     ],
     remotePatterns: [
       {
@@ -27,6 +29,18 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '*.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.qrserver.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.vietqr.io',
         port: '',
         pathname: '/**',
       },

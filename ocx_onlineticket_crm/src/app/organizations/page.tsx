@@ -94,7 +94,7 @@ export default function OrganizationsPage() {
             )}
           </div>
         </div>
-        </div>
+      </div>
       </div>
       {selectedOrgId && (
         <OrganizationDetailModal

@@ -10,6 +10,7 @@
     "tw:init": "tailwindcss init -p"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.4",
     "@supabase/supabase-js": "^2.51.0",
     "@tabler/icons-react": "^3.34.0",
     "next": "15.4.1",

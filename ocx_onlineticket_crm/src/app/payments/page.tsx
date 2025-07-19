@@ -253,7 +253,7 @@ export default function PaymentsPage() {
   };
 
   const getTotalAmount = () => {
-    return payments.reduce((sum, payment) => sum + payment.amount, 0);
+    return payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
   };
 
   return (

@@ -31,6 +31,7 @@ interface Order {
   reserved_until?: string;
   created_at: string;
   updated_at: string;
+  sending_status?: string;
 }
 
 const statusColor = (status?: string) => {
@@ -182,6 +183,7 @@ export default function OrdersPage() {
                         <th className="w-[200px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
                           Created At
                         </th>
+                        <th className="w-[140px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Sending Status</th>
                         <th className="w-[120px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
                           Actions
                         </th>
@@ -323,6 +325,20 @@ export default function OrdersPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4 align-middle">
+                            {order.sending_status === 'SENT' && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-500 text-white">SENT</span>
+                            )}
+                            {order.sending_status === 'FAILED' && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-red-500 text-white">FAILED</span>
+                            )}
+                            {order.sending_status === 'PENDING' && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-yellow-500 text-white">PENDING</span>
+                            )}
+                            {(!order.sending_status || order.sending_status === 'NOT_SENT') && (
+                              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-400 text-white">NOT_SENT</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 align-middle">
                             <div className="flex gap-2">
                               <button
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-sm transition-colors"
@@ -363,3 +379,4 @@ export default function OrdersPage() {
     </DashboardLayout>
   );
 }
+ 
