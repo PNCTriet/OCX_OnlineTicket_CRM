@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import puppeteer from 'puppeteer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(request: NextRequest) {
   try {
     const { to, subject, html, ticketData } = await request.json();
@@ -48,7 +46,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send email via Resend
+    // Initialize Resend and send email
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error('Missing RESEND_API_KEY environment variable');
+      return NextResponse.json({ error: 'Email service not configured' }, { status: 500 });
+    }
+
+    const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send(emailBody);
 
     if (error) {
