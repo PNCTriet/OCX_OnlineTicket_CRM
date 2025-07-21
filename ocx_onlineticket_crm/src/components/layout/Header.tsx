@@ -159,7 +159,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
                     alt="User"
                   />
                 </span>
-                <span className="text-sm mr-1 block font-medium">{user?.full_name || user?.email || 'User'}</span>
+                <span className="text-sm mr-1 hidden lg:block font-medium">{user?.full_name || user?.email || 'User'}</span>
                 <svg
                   className={`stroke-gray-500 dark:stroke-gray-400 duration-300 ease-in-out ${dropdownOpen ? 'rotate-180' : ''}`}
                   width="18"
