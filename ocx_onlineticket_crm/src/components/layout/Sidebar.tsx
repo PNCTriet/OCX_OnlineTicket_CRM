@@ -115,7 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-9999 flex h-screen flex-col overflow-y-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 duration-300 ease-linear
+      className={`fixed left-0 top-0 z-9999 flex h-screen flex-col overflow-y-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-black duration-300 ease-linear
         ${isCollapsed ? 'w-20' : 'w-72'}
       `}
     >

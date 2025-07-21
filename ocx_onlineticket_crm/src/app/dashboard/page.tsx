@@ -26,7 +26,7 @@ import {
 interface DashboardStats {
   total_revenue: number;
   total_tickets_sold: number;
-  total_orders: number;
+  total_orders: Record<string, number>;
   total_events: number;
   total_organizations: number;
 }
@@ -75,6 +75,7 @@ export default function DashboardPage() {
   const [weeklySales, setWeeklySales] = useState<WeeklySalesData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOrderStatus, setSelectedOrderStatus] = useState("PAID");
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -365,6 +366,12 @@ export default function DashboardPage() {
     return amount.toString();
   };
 
+  // Responsive number style for all metrics
+  const metricNumberClass =
+    "font-bold text-gray-800 dark:text-white/90 min-w-0 whitespace-nowrap text-[clamp(1.5rem,4vw,2.0rem)] leading-tight";
+  const revenueNumberClass =
+    "font-bold text-gray-800 dark:text-white/90 min-w-0 whitespace-nowrap text-[clamp(1.5rem,4vw,2.5rem)] leading-tight";
+
   if (!isAuthenticated) return null;
 
   if (loading) {
@@ -404,221 +411,125 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-4 mx-auto max-w-screen-2xl md:p-6 bg-white dark:bg-gray-900 min-h-screen">
+      <div className="p-4 mx-auto max-w-screen-2xl md:p-6 bg-white dark:bg-black min-h-screen">
         <div className="grid grid-cols-12 gap-4 md:gap-6">
           {/* Metric Group One */}
           <div className="col-span-12">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 md:gap-6">
               {/* Metric 1 - Total Revenue */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+              <div className="relative rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 dark:bg-green-500/15">
                   <IconCoins className="text-green-600 dark:text-green-500" />
                 </div>
-                <div className="mt-5 flex items-end justify-between">
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Revenue
-                    </span>
-                    <h4 className="mt-2 text-title-sm font-bold text-gray-800 dark:text-white/90">
-                      {stats ? formatCurrency(stats.total_revenue) : "0 ₫"}
-                    </h4>
-                  </div>
-                  <span className="flex items-center gap-1 rounded-full bg-green-50 py-0.5 pl-2 pr-2.5 text-sm font-medium text-green-600 dark:bg-green-500/15 dark:text-green-500">
-                    <svg
-                      className="fill-current"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M5.56462 1.62393C5.70193 1.47072 5.90135 1.37432 6.12329 1.37432C6.1236 1.37432 6.12391 1.37432 6.12422 1.37432C6.31631 1.37415 6.50845 1.44731 6.65505 1.59381L9.65514 4.5918C9.94814 4.88459 9.94831 5.35947 9.65552 5.65246C9.36273 5.94546 8.88785 5.94562 8.59486 5.65283L6.87329 3.93247L6.87329 10.125C6.87329 10.5392 6.53751 10.875 6.12329 10.875C5.70908 10.875 5.37329 10.5392 5.37329 10.125L5.37329 3.93578L3.65516 5.65282C3.36218 5.94562 2.8873 5.94547 2.5945 5.65248C2.3017 5.35949 2.30185 4.88462 2.59484 4.59182L5.56462 1.62393Z"
-                      />
-                    </svg>
-                    Live
+                <div className="mt-5 pr-16">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Revenue
                   </span>
+                  <h4 className={metricNumberClass}>
+                    {stats ? formatCurrency(stats.total_revenue) : "0 ₫"}
+                  </h4>
                 </div>
               </div>
 
               {/* Metric 2 - Total Users */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+              <div className="relative rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-500/15">
                   <IconUsers className="text-teal-600 dark:text-teal-500" />
                 </div>
-                <div className="mt-5 flex items-end justify-between">
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Total Users
-                    </span>
-                    <h4 className="mt-2 text-title-sm font-bold text-gray-800 dark:text-white/90">
-                      {formatNumber(users.length)}
-                    </h4>
-                  </div>
-                  <span className="flex items-center gap-1 rounded-full bg-teal-50 py-0.5 pl-2 pr-2.5 text-sm font-medium text-teal-600 dark:bg-teal-500/15 dark:text-teal-500">
-                    <svg
-                      className="fill-current"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M5.56462 1.62393C5.70193 1.47072 5.90135 1.37432 6.12329 1.37432C6.1236 1.37432 6.12391 1.37432 6.12422 1.37432C6.31631 1.37415 6.50845 1.44731 6.65505 1.59381L9.65514 4.5918C9.94814 4.88459 9.94831 5.35947 9.65552 5.65246C9.36273 5.94546 8.88785 5.94562 8.59486 5.65283L6.87329 3.93247L6.87329 10.125C6.87329 10.5392 6.53751 10.875 6.12329 10.875C5.70908 10.875 5.37329 10.5392 5.37329 10.125L5.37329 3.93578L3.65516 5.65282C3.36218 5.94562 2.8873 5.94547 2.5945 5.65248C2.3017 5.35949 2.30185 4.88462 2.59484 4.59182L5.56462 1.62393Z"
-                      />
-                    </svg>
-                    Live
+                <div className="mt-5 pr-16">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Total Users
                   </span>
+                  <h4 className={metricNumberClass}>
+                    {formatNumber(users.length)}
+                  </h4>
                 </div>
               </div>
 
-              {/* Metric 3 - Total Orders */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+              {/* Metric 3 - Total Orders (with dropdown) */}
+              <div className="relative rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                {/* Dropdown status ở góc phải, dưới Live */}
+                {stats && (
+                  <select
+                    className="absolute right-4 top-2 px-1 py-0.5 h-6 rounded border text-xs bg-white dark:bg-gray-800 z-10"
+                    value={selectedOrderStatus}
+                    onChange={(e) => setSelectedOrderStatus(e.target.value)}
+                  >
+                    {Object.keys(stats.total_orders).map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/15">
                   <IconShoppingCart className="text-blue-600 dark:text-blue-500" />
                 </div>
-                <div className="mt-5 flex items-end justify-between">
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Orders
-                    </span>
-                    <h4 className="mt-2 text-title-sm font-bold text-gray-800 dark:text-white/90">
-                      {stats ? formatNumber(stats.total_orders) : "0"}
-                    </h4>
-                  </div>
-                  <span className="flex items-center gap-1 rounded-full bg-blue-50 py-0.5 pl-2 pr-2.5 text-sm font-medium text-blue-600 dark:bg-blue-500/15 dark:text-blue-500">
-                    <svg
-                      className="fill-current"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M5.56462 1.62393C5.70193 1.47072 5.90135 1.37432 6.12329 1.37432C6.1236 1.37432 6.12391 1.37432 6.12422 1.37432C6.31631 1.37415 6.50845 1.44731 6.65505 1.59381L9.65514 4.5918C9.94814 4.88459 9.94831 5.35947 9.65552 5.65246C9.36273 5.94546 8.88785 5.94562 8.59486 5.65283L6.87329 3.93247L6.87329 10.125C6.87329 10.5392 6.53751 10.875 6.12329 10.875C5.70908 10.875 5.37329 10.5392 5.37329 10.125L5.37329 3.93578L3.65516 5.65282C3.36218 5.94562 2.8873 5.94547 2.5945 5.65248C2.3017 5.35949 2.30185 4.88462 2.59484 4.59182L5.56462 1.62393Z"
-                      />
-                    </svg>
-                    Live
+                <div className="mt-5 pr-16">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Orders
                   </span>
+                  <h4 className={metricNumberClass}>
+                    {stats && stats.total_orders
+                      ? formatNumber(
+                          stats.total_orders[selectedOrderStatus] || 0
+                        )
+                      : "0"}
+                  </h4>
                 </div>
               </div>
 
               {/* Metric 4 - Total Tickets Sold */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+              <div className="relative rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-500/15">
                   <IconTicket className="text-purple-600 dark:text-purple-500" />
                 </div>
-                <div className="mt-5 flex items-end justify-between">
-                <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Tickets Sold
-                    </span>
-                    <h4 className="mt-2 text-title-sm font-bold text-gray-800 dark:text-white/90">
-                      {stats ? formatNumber(stats.total_tickets_sold) : "0"}
-                    </h4>
-                </div>
-                  <span className="flex items-center gap-1 rounded-full bg-purple-50 py-0.5 pl-2 pr-2.5 text-sm font-medium text-purple-600 dark:bg-purple-500/15 dark:text-purple-500">
-                    <svg
-                      className="fill-current"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M5.56462 1.62393C5.70193 1.47072 5.90135 1.37432 6.12329 1.37432C6.1236 1.37432 6.12391 1.37432 6.12422 1.37432C6.31631 1.37415 6.50845 1.44731 6.65505 1.59381L9.65514 4.5918C9.94814 4.88459 9.94831 5.35947 9.65552 5.65246C9.36273 5.94546 8.88785 5.94562 8.59486 5.65283L6.87329 3.93247L6.87329 10.125C6.87329 10.5392 6.53751 10.875 6.12329 10.875C5.70908 10.875 5.37329 10.5392 5.37329 10.125L5.37329 3.93578L3.65516 5.65282C3.36218 5.94562 2.8873 5.94547 2.5945 5.65248C2.3017 5.35949 2.30185 4.88462 2.59484 4.59182L5.56462 1.62393Z"
-                      />
-                    </svg>
-                    Live
+                <div className="mt-5 pr-16">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Tickets Sold
                   </span>
-            </div>
-          </div>
+                  <h4 className={metricNumberClass}>
+                    {stats ? formatNumber(stats.total_tickets_sold) : "0"}
+                  </h4>
+                </div>
+              </div>
 
               {/* Metric 5 - Total Events */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+              <div className="relative rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-500/15">
                   <IconCalendarEvent className="text-orange-600 dark:text-orange-500" />
                 </div>
-                <div className="mt-5 flex items-end justify-between">
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Total Events
-                    </span>
-                    <h4 className="mt-2 text-title-sm font-bold text-gray-800 dark:text-white/90">
-                      {stats ? formatNumber(stats.total_events) : "0"}
-                    </h4>
-                  </div>
-                  <span className="flex items-center gap-1 rounded-full bg-orange-50 py-0.5 pl-2 pr-2.5 text-sm font-medium text-orange-600 dark:bg-orange-500/15 dark:text-orange-500">
-                    <svg
-                      className="fill-current"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M5.56462 1.62393C5.70193 1.47072 5.90135 1.37432 6.12329 1.37432C6.1236 1.37432 6.12391 1.37432 6.12422 1.37432C6.31631 1.37415 6.50845 1.44731 6.65505 1.59381L9.65514 4.5918C9.94814 4.88459 9.94831 5.35947 9.65552 5.65246C9.36273 5.94546 8.88785 5.94562 8.59486 5.65283L6.87329 3.93247L6.87329 10.125C6.87329 10.5392 6.53751 10.875 6.12329 10.875C5.70908 10.875 5.37329 10.5392 5.37329 10.125L5.37329 3.93578L3.65516 5.65282C3.36218 5.94562 2.8873 5.94547 2.5945 5.65248C2.3017 5.35949 2.30185 4.88462 2.59484 4.59182L5.56462 1.62393Z"
-                      />
-                    </svg>
-                    Live
+                <div className="mt-5 pr-16">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Total Events
                   </span>
+                  <h4 className={metricNumberClass}>
+                    {stats ? formatNumber(stats.total_events) : "0"}
+                  </h4>
                 </div>
               </div>
 
               {/* Metric 6 - Total Organizations */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+              <div className="relative rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/15">
                   <IconBuilding className="text-indigo-600 dark:text-indigo-500" />
                 </div>
-                <div className="mt-5 flex items-end justify-between">
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Organizations
-                    </span>
-                    <h4 className="mt-2 text-title-sm font-bold text-gray-800 dark:text-white/90">
-                      {stats ? formatNumber(stats.total_organizations) : "0"}
-                    </h4>
-                  </div>
-                  <span className="flex items-center gap-1 rounded-full bg-indigo-50 py-0.5 pl-2 pr-2.5 text-sm font-medium text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-500">
-                    <svg
-                      className="fill-current"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M5.56462 1.62393C5.70193 1.47072 5.90135 1.37432 6.12329 1.37432C6.1236 1.37432 6.12391 1.37432 6.12422 1.37432C6.31631 1.37415 6.50845 1.44731 6.65505 1.59381L9.65514 4.5918C9.94814 4.88459 9.94831 5.35947 9.65552 5.65246C9.36273 5.94546 8.88785 5.94562 8.59486 5.65283L6.87329 3.93247L6.87329 10.125C6.87329 10.5392 6.53751 10.875 6.12329 10.875C5.70908 10.875 5.37329 10.5392 5.37329 10.125L5.37329 3.93578L3.65516 5.65282C3.36218 5.94562 2.8873 5.94547 2.5945 5.65248C2.3017 5.35949 2.30185 4.88462 2.59484 4.59182L5.56462 1.62393Z"
-                      />
-                    </svg>
-                    Live
+                <div className="mt-5 pr-16">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Organizations
                   </span>
+                  <h4 className={metricNumberClass}>
+                    {stats ? formatNumber(stats.total_organizations) : "0"}
+                  </h4>
                 </div>
               </div>
-              
             </div>
           </div>
           {/* Ticket Metrics Chart */}
           <div className="col-span-12">
             <TicketMetricsChart loading={loading} />
-                </div>
+          </div>
           {/* Chart One - Monthly Sales */}
           <div className="col-span-12">
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
@@ -661,10 +572,10 @@ export default function DashboardPage() {
                                   style={{ top: `${position}%` }}
                                 >
                                   {label}
-              </div>
+                                </div>
                               );
                             })}
-                    </div>
+                        </div>
 
                         {/* Chart bars */}
                         <div className="ml-10 h-full flex items-end justify-between px-2 pb-4 relative z-10">
@@ -692,16 +603,16 @@ export default function DashboardPage() {
                                     {/* Tooltip */}
                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                                       {formatCurrency(data.revenue)}
-                    </div>
-                  </div>
-                    </div>
+                                    </div>
+                                  </div>
+                                </div>
                                 <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 text-center">
                                   {formatMonth(data.time)}
-                  </div>
-                </div>
+                                </div>
+                              </div>
                             );
                           })}
-                    </div>
+                        </div>
 
                         {/* Grid lines */}
                         <div className="absolute left-10 top-0 h-full w-full pointer-events-none">
@@ -712,12 +623,12 @@ export default function DashboardPage() {
                               style={{ top: `${position}%` }}
                             ></div>
                           ))}
-                    </div>
+                        </div>
                       </>
                     ) : (
                       <div className="h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-sm">
                         No data available
-                  </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -736,4 +647,4 @@ export default function DashboardPage() {
       </div>
     </DashboardLayout>
   );
-} 
+}
