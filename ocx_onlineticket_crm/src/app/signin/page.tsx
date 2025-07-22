@@ -101,7 +101,7 @@ export default function SignPage() {
   };
 
   return (
-    <div className="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
+    <div className="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0 h-screen overflow-hidden sm:overflow-auto">
       <div className="relative flex flex-col justify-center w-full h-screen dark:bg-gray-900 sm:p-0 lg:flex-row">
         {/* Form */}
         <div className="flex flex-col flex-1 w-full lg:w-1/2">
@@ -266,7 +266,11 @@ export default function SignPage() {
                       Keep me logged in
                     </label>
                     <Link
-                      href="/reset-password"
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        alert("This feature is disabled by admin. Please contact support for assistance.");
+                      }}
                       className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400"
                     >
                       Forgot password?
@@ -289,7 +293,11 @@ export default function SignPage() {
                   <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
                     Don&apos;t have an account?{" "}
                     <Link
-                      href="/signup"
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        alert("This feature is disabled by admin. Please contact support for assistance.");
+                      }}
                       className="text-blue-500 hover:text-blue-600 dark:text-blue-400"
                     >
                       Sign Up
