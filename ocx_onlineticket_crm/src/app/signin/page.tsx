@@ -116,7 +116,7 @@ export default function SignPage() {
                 </p>
               </div>
               <div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+                {/* <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
                   <button
                     type="button"
                     className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -150,7 +150,7 @@ export default function SignPage() {
                     </svg>
                     {googleLoading ? "Signing in..." : "Sign in with Google"}
                   </button>
-                </div>
+                </div> */}
                 <div className="relative py-3 sm:py-5">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
@@ -315,7 +315,7 @@ export default function SignPage() {
             <div className="flex flex-col items-center max-w-xs">
               <Link href="/" className="block mb-4"></Link>
               <p className="text-center text-gray-400 dark:text-white/60">
-                Free and Open-Source Tailwind CSS Admin Dashboard Template
+                Holws Ticket | Ớt Cay Xè Admin Dashboard
               </p>
             </div>
           </div>
