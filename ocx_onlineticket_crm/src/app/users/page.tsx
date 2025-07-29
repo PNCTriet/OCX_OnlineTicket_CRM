@@ -59,6 +59,17 @@ export default function UsersPage() {
     if (toastTimeout.current) clearTimeout(toastTimeout.current);
     toastTimeout.current = setTimeout(() => setToast(t => ({ ...t, open: false })), 3000);
   }
+
+  // Copy email function
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      showToast('Email copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Failed to copy email:', error);
+      showToast('Failed to copy email!', 'error');
+    }
+  };
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -309,6 +320,7 @@ export default function UsersPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead>
                     <tr className="border-gray-100 border-y dark:border-gray-800">
+                      <th className="py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">#</th>
                       {columns.map(col => (
                         <th key={col.key} className="py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">{col.label}</th>
                       ))}
@@ -318,12 +330,28 @@ export default function UsersPage() {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {users.map((user, idx) => (
                       <tr key={user.id || idx}>
+                        <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle">
+                          {idx + 1}
+                        </td>
                         {columns.map(col => (
                           <td key={col.key} className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle">
                             {col.key === 'avatar_url' ? (
                               <div className="flex items-center justify-center">
                                 <AvatarImg src={user.avatar_url} alt={user.email} />
                               </div>
+                            ) : col.key === 'email' ? (
+                              <button
+                                onClick={() => copyEmail(user.email)}
+                                className="text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer group relative"
+                                title={`Click to copy: ${user.email}`}
+                              >
+                                <span className="block truncate group-hover:underline max-w-[200px]">
+                                  {user.email}
+                                </span>
+                                <div className="absolute left-0 top-full z-10 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                  {user.email}
+                                </div>
+                              </button>
                             ) : col.key === 'role' ? (
                               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${roleColor(user.role)}`}>{user.role || 'USER'}</span>
                             ) : col.key === 'is_verified' ? (

@@ -78,13 +78,8 @@ export default function DashboardPage() {
   const [selectedOrderStatus, setSelectedOrderStatus] = useState("PAID");
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace("/signin");
-      return;
-    }
-
     fetchDashboardData();
-  }, [isAuthenticated, token]);
+  }, [token]);
 
   const fetchDashboardData = async () => {
     if (!token) return;
@@ -372,7 +367,7 @@ export default function DashboardPage() {
   const revenueNumberClass =
     "font-bold text-gray-800 dark:text-white/90 min-w-0 whitespace-nowrap text-[clamp(1.5rem,4vw,2.5rem)] leading-tight";
 
-  if (!isAuthenticated) return null;
+
 
   if (loading) {
     return (

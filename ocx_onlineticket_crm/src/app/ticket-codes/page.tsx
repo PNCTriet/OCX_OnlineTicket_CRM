@@ -433,6 +433,9 @@ export default function TicketCodesPage() {
                       <thead>
                         <tr className="border-gray-100 border-y dark:border-gray-800">
                           <th className="py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
+                            #
+                          </th>
+                          <th className="py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
                             QR Code
                           </th>
                           <th className="py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
@@ -456,8 +459,11 @@ export default function TicketCodesPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {allCodes.map((codeData) => (
+                        {allCodes.map((codeData, idx) => (
                           <tr key={codeData.id}>
+                            <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle">
+                              {idx + 1}
+                            </td>
                             <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle">
                               <div className="flex items-center gap-2">
                                 <button

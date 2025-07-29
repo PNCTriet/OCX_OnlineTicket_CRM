@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { API_BASE_URL } from "@/lib/apiConfig";
 import {
@@ -12,6 +12,7 @@ import {
   IconBuilding,
   IconFilter,
   IconCalendar,
+  IconTicket,
 } from "@tabler/icons-react";
 import Image from "next/image";
 
@@ -25,21 +26,44 @@ interface Payment {
   created_at: string;
   updated_at: string;
   order?: {
+    id: string;
     user?: {
       email?: string;
       avatar_url?: string;
       first_name?: string;
       last_name?: string;
     };
-    organization?: { name?: string };
-    event?: { title?: string };
+    order_items?: Array<{
+      ticket?: {
+        name?: string;
+        price?: number;
+      };
+    }>;
+  };
+}
+
+interface PaymentResponse {
+  event?: {
+    id: string;
+    title: string;
+  };
+  payments: Payment[];
+  pagination?: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+  summary?: {
+    totalRevenue: number;
+    totalPayments: number;
   };
 }
 
 interface FilterState {
   dateFrom: string;
   dateTo: string;
-  organizationId: string;
+  eventId: string;
   status: string;
   paymentMethod: string;
 }
@@ -82,11 +106,11 @@ const AvatarImg = ({ src, alt }: { src?: string; alt?: string }) => {
   return imgSrc ? (
     <Image
       src={imgSrc}
-      alt={alt || "Avatar"}
+      alt={alt || 'Avatar'}
       width={32}
       height={32}
       className="rounded-full object-cover bg-gray-200"
-      onError={() => setImgSrc("/images/user/owner.jpg")}
+      onError={() => setImgSrc('/images/user/owner.jpg')}
     />
   ) : (
     <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700">
@@ -98,15 +122,37 @@ const AvatarImg = ({ src, alt }: { src?: string; alt?: string }) => {
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOrganizations, setLoadingOrganizations] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [currentEvent, setCurrentEvent] = useState<any>(null);
+  const [responseData, setResponseData] = useState<PaymentResponse | null>(null);
+  const [toast, setToast] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({ open: false, message: '', type: 'success' });
+  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     dateFrom: "",
     dateTo: "",
-    organizationId: "",
+    eventId: "",
     status: "",
     paymentMethod: "",
   });
+
+  function showToast(message: string, type: 'success' | 'error') {
+    setToast({ open: true, message, type });
+    if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    toastTimeout.current = setTimeout(() => setToast(t => ({ ...t, open: false })), 3000);
+  }
+
+  // Copy email function
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      showToast('Email copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Failed to copy email:', error);
+      showToast('Failed to copy email!', 'error');
+    }
+  };
 
   // Lấy JWT token từ localStorage hoặc auth context
   const getAuthToken = () => {
@@ -120,19 +166,30 @@ export default function PaymentsPage() {
   };
 
   useEffect(() => {
-    const fetchOrganizations = async () => {
+    const fetchEvents = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/organizations`);
+        setLoadingOrganizations(true);
+        const token = getAuthToken();
+        if (!token) return;
+        
+        const res = await fetch(`${API_BASE_URL}/events`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
         if (res.ok) {
           const data = await res.json();
-          setOrganizations(data);
+          setEvents(data);
         }
       } catch (err) {
-        console.error("Failed to fetch organizations:", err);
+        console.error("Failed to fetch events:", err);
+      } finally {
+        setLoadingOrganizations(false);
       }
     };
 
-    fetchOrganizations();
+    fetchEvents();
   }, []);
 
   useEffect(() => {
@@ -148,54 +205,37 @@ export default function PaymentsPage() {
       }
 
       try {
-        // For now, we'll fetch all orders and their payments
-        // In a real implementation, you'd have a dedicated /payments endpoint
-        const ordersRes = await fetch(`${API_BASE_URL}/orders`, {
+        // Fetch payments for selected event or all events
+        const eventId = filters.eventId;
+        const url = eventId 
+          ? `${API_BASE_URL}/payments/event/${eventId}`
+          : `${API_BASE_URL}/payments`;
+        
+        const paymentsRes = await fetch(url, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
 
-        if (!ordersRes.ok) {
-          if (ordersRes.status === 401) {
+        if (!paymentsRes.ok) {
+          if (paymentsRes.status === 401) {
             setError("Authentication failed. Please login again.");
           } else {
-            throw new Error(`Failed to fetch orders: ${ordersRes.status}`);
+            throw new Error(`Failed to fetch payments: ${paymentsRes.status}`);
           }
           return;
         }
 
-        const orders = await ordersRes.json();
+        const responseData: PaymentResponse = await paymentsRes.json();
+        const allPayments: Payment[] = responseData.payments || responseData;
+        const eventData = responseData.event;
         
-        // Fetch payments for each order
-        const allPayments: Payment[] = [];
-        for (const order of orders) {
-          try {
-            const paymentsRes = await fetch(`${API_BASE_URL}/orders/${order.id}/payments`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            });
-
-            if (paymentsRes.ok) {
-              const payments = await paymentsRes.json();
-              // Add order information to each payment
-              const paymentsWithOrder = payments.map((payment: Payment) => ({
-                ...payment,
-                order: {
-                  user: order.user,
-                  organization: order.organization,
-                  event: order.event,
-                },
-              }));
-              allPayments.push(...paymentsWithOrder);
-            }
-          } catch (err) {
-            console.error(`Failed to fetch payments for order ${order.id}:`, err);
-          }
-        }
+        setCurrentEvent(eventData);
+        setResponseData(responseData);
+        
+        console.log(`Fetched ${allPayments.length} payments${eventId ? ` for event ${eventId}` : ''}`);
+        console.log('Current event:', eventData);
 
         // Apply filters
         let filteredPayments = allPayments;
@@ -220,7 +260,7 @@ export default function PaymentsPage() {
 
         if (filters.paymentMethod) {
           filteredPayments = filteredPayments.filter(
-            (payment) => payment.payment_method.toUpperCase() === filters.paymentMethod.toUpperCase()
+            (payment) => payment.payment_method?.toUpperCase() === filters.paymentMethod.toUpperCase()
           );
         }
 
@@ -233,7 +273,7 @@ export default function PaymentsPage() {
     };
 
     fetchPayments();
-  }, [filters]);
+  }, [filters.eventId, filters.dateFrom, filters.dateTo, filters.status, filters.paymentMethod]);
 
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     setFilters(prev => ({
@@ -246,7 +286,7 @@ export default function PaymentsPage() {
     setFilters({
       dateFrom: "",
       dateTo: "",
-      organizationId: "",
+      eventId: "",
       status: "",
       paymentMethod: "",
     });
@@ -296,19 +336,24 @@ export default function PaymentsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Organization
+                  Event
                 </label>
                 <select
-                  value={filters.organizationId}
-                  onChange={(e) => handleFilterChange("organizationId", e.target.value)}
+                  value={filters.eventId}
+                  onChange={(e) => handleFilterChange("eventId", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  disabled={loadingOrganizations}
                 >
-                  <option value="">All Organizations</option>
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-                  ))}
+                  <option value="">All Events</option>
+                  {loadingOrganizations ? (
+                    <option value="" disabled>Loading events...</option>
+                  ) : (
+                    events.map((event) => (
+                      <option key={event.id} value={event.id}>
+                        {event.title}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
               <div>
@@ -357,12 +402,14 @@ export default function PaymentsPage() {
         </div>
 
         {/* Summary Stats */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Payments</p>
-                <p className="text-2xl font-bold text-gray-800 dark:text-white/90">{payments.length}</p>
+                <p className="text-2xl font-bold text-gray-800 dark:text-white/90">
+                  {responseData?.summary?.totalPayments || payments.length}
+                </p>
               </div>
               <IconCreditCard className="w-8 h-8 text-blue-500" />
             </div>
@@ -372,7 +419,7 @@ export default function PaymentsPage() {
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Amount</p>
                 <p className="text-2xl font-bold text-gray-800 dark:text-white/90">
-                  {getTotalAmount().toLocaleString("vi-VN", {
+                  {(responseData?.summary?.totalRevenue || getTotalAmount()).toLocaleString("vi-VN", {
                     style: "currency",
                     currency: "VND",
                   })}
@@ -396,6 +443,22 @@ export default function PaymentsPage() {
               <IconCheck className="w-8 h-8 text-green-500" />
             </div>
           </div>
+          <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Avg Amount</p>
+                <p className="text-2xl font-bold text-gray-800 dark:text-white/90">
+                  {payments.length > 0
+                    ? (getTotalAmount() / payments.length).toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })
+                    : "0 ₫"}
+                </p>
+              </div>
+              <IconCreditCard className="w-8 h-8 text-blue-500" />
+            </div>
+          </div>
         </div>
 
         {/* Payments Table */}
@@ -407,8 +470,11 @@ export default function PaymentsPage() {
           </div>
           <div className="p-5 border-t border-gray-100 dark:border-gray-800 sm:p-6">
             {loading ? (
-              <div className="text-center text-gray-500 dark:text-gray-400">
-                Loading...
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className="text-gray-500 dark:text-gray-400">
+                  Loading payments...
+                </div>
               </div>
             ) : error ? (
               <div className="text-center text-red-500">{error}</div>
@@ -431,7 +497,7 @@ export default function PaymentsPage() {
                         Event
                       </th>
                       <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
-                        Organization
+                        Ticket
                       </th>
                       <th className="w-[120px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">
                         Amount
@@ -463,24 +529,43 @@ export default function PaymentsPage() {
                               src={payment.order?.user?.avatar_url}
                               alt={payment.order?.user?.email}
                             />
-                            <span className="max-w-[150px] whitespace-nowrap text-ellipsis">
-                              {payment.order?.user?.email || "N/A"}
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="max-w-[150px] whitespace-nowrap text-ellipsis text-sm font-medium">
+                                {payment.order?.user?.first_name && payment.order?.user?.last_name 
+                                  ? `${payment.order.user.first_name} ${payment.order.user.last_name}`
+                                  : payment.order?.user?.email || "N/A"
+                                }
+                              </span>
+                              {payment.order?.user?.first_name && (
+                                <button
+                                  onClick={() => copyEmail(payment.order?.user?.email || "")}
+                                  className="max-w-[150px] text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer group relative"
+                                  title={`Click to copy: ${payment.order?.user?.email}`}
+                                >
+                                  <span className="block truncate group-hover:underline text-xs text-gray-500">
+                                    {payment.order?.user?.email}
+                                  </span>
+                                  <div className="absolute left-0 top-full z-10 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                    {payment.order?.user?.email}
+                                  </div>
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[150px]">
                           <div className="flex items-center gap-2">
                             <IconCalendarEvent className="w-5 h-5 text-blue-400 shrink-0" />
                             <span className="max-w-[120px] whitespace-nowrap text-ellipsis">
-                              {payment.order?.event?.title || "N/A"}
+                              {currentEvent?.title || "N/A"}
                             </span>
                           </div>
                         </td>
                         <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[150px]">
                           <div className="flex items-center gap-2">
-                            <IconBuilding className="w-5 h-5 text-green-400 shrink-0" />
+                            <IconTicket className="w-5 h-5 text-purple-400 shrink-0" />
                             <span className="max-w-[120px] whitespace-nowrap text-ellipsis">
-                              {payment.order?.organization?.name || "N/A"}
+                              {payment.order?.order_items?.[0]?.ticket?.name || "N/A"}
                             </span>
                           </div>
                         </td>
@@ -556,6 +641,14 @@ export default function PaymentsPage() {
           </div>
         </div>
       </div>
+      
+      {/* Toast Notification */}
+      {toast.open && (
+        <div className={`fixed top-6 right-6 z-[9999] px-6 py-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.message}
+          <button onClick={() => setToast(t => ({ ...t, open: false }))} className="ml-4 text-white/80 hover:text-white font-bold">×</button>
+        </div>
+      )}
     </DashboardLayout>
   );
 } 

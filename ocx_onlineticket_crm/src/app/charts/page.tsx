@@ -9,19 +9,12 @@ import OrganizationStatsChart from "@/components/charts/OrganizationStatsChart";
 import EventStatsChart from "@/components/charts/EventStatsChart";
 
 export default function ChartsPage() {
-  const { isAuthenticated, token } = useAuth();
-  const router = useRouter();
+  const { token } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace("/signin");
-      return;
-    }
     setLoading(false);
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) return null;
+  }, []);
 
   if (loading) {
     return (

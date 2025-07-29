@@ -86,6 +86,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
       localStorage.setItem('user', JSON.stringify(finalUser));
+      
+      // Set cookie for middleware
+      document.cookie = `access_token=${data.access_token}; path=/; max-age=86400; samesite=lax`;
+      
+      console.log('Login successful, token saved to cookie');
+      console.log('Current cookies:', document.cookie);
+      
+      // Verify cookie was set
+      const cookies = document.cookie.split(';');
+      const accessTokenCookie = cookies.find(cookie => cookie.trim().startsWith('access_token='));
+      console.log('Access token cookie found:', !!accessTokenCookie);
     }
   };
 
@@ -96,6 +107,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
+      
+      // Remove cookie for middleware
+      document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      
       window.location.href = '/signin'; // Force reload and redirect
     }
   };

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { API_BASE_URL } from "@/lib/apiConfig";
 import {
@@ -75,6 +75,25 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedPaymentOrderId, setSelectedPaymentOrderId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({ open: false, message: '', type: 'success' });
+  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  function showToast(message: string, type: 'success' | 'error') {
+    setToast({ open: true, message, type });
+    if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    toastTimeout.current = setTimeout(() => setToast(t => ({ ...t, open: false })), 3000);
+  }
+
+  // Copy email function
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      showToast('Email copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Failed to copy email:', error);
+      showToast('Failed to copy email!', 'error');
+    }
+  };
 
   // Lấy JWT token từ localStorage hoặc auth context
   const getAuthToken = () => {
@@ -202,9 +221,18 @@ export default function OrdersPage() {
                                 src={order.user?.avatar_url}
                                 alt={order.user?.email}
                               />
-                              <span className="max-w-[250px] whitespace-nowrap text-ellipsis">
-                                {order.user?.email || "N/A"}
-                              </span>
+                              <button
+                                onClick={() => copyEmail(order.user?.email || "")}
+                                className="max-w-[250px] text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer group relative"
+                                title={`Click to copy: ${order.user?.email || "N/A"}`}
+                              >
+                                <span className="block truncate group-hover:underline">
+                                  {order.user?.email || "N/A"}
+                                </span>
+                                <div className="absolute left-0 top-full z-10 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                  {order.user?.email || "N/A"}
+                                </div>
+                              </button>
                             </div>
                           </td>
                           <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[240px]">
@@ -375,6 +403,14 @@ export default function OrdersPage() {
           orderId={selectedPaymentOrderId}
           onClose={() => setSelectedPaymentOrderId(null)}
         />
+      )}
+      
+      {/* Toast Notification */}
+      {toast.open && (
+        <div className={`fixed top-6 right-6 z-[9999] px-6 py-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.message}
+          <button onClick={() => setToast(t => ({ ...t, open: false }))} className="ml-4 text-white/80 hover:text-white font-bold">×</button>
+        </div>
       )}
     </DashboardLayout>
   );

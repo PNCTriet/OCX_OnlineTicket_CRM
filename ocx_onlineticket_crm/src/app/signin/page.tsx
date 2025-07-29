@@ -33,11 +33,7 @@ export default function SignPage() {
   const { isAuthenticated, login } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/dashboard");
-    }
-  }, [isAuthenticated]);
+
 
   // Khi load trang, đọc trạng thái darkMode từ localStorage
   useEffect(() => {
@@ -67,8 +63,19 @@ export default function SignPage() {
     setError(null);
     try {
       const data = await loginApi(email, password);
-      login(data); // Lưu vào context/localStorage
-      router.replace("/dashboard");
+      await login(data); // Lưu vào context/localStorage
+      
+      // Wait a bit for cookie to be set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Redirect to original page or dashboard
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectTo = urlParams.get('redirect') || '/dashboard';
+      console.log('Redirecting to:', redirectTo);
+      
+      // Use window.location.href to force a full page reload
+      // This ensures middleware can read the cookie
+      window.location.href = redirectTo;
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {

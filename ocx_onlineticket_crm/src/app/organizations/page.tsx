@@ -58,6 +58,7 @@ export default function OrganizationsPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead>
                     <tr className="border-gray-100 border-y dark:border-gray-800">
+                      <th className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">#</th>
                       <th className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">Name</th>
                       <th className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">Email</th>
                       <th className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">Phone</th>
@@ -67,8 +68,9 @@ export default function OrganizationsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {orgs.map(org => (
+                    {orgs.map((org, idx) => (
                       <tr key={org.id}>
+                        <td className="py-3 px-4 text-gray-800 dark:text-white/90">{idx + 1}</td>
                         <td className="py-3 px-4 text-gray-800 dark:text-white/90">{org.name}</td>
                         <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{org.contact_email || '-'}</td>
                         <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{org.phone || '-'}</td>

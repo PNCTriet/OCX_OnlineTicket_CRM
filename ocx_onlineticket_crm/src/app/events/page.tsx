@@ -68,6 +68,7 @@ export default function EventsPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead>
                     <tr className="border-gray-100 border-y dark:border-gray-800">
+                      <th className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">#</th>
                       <th className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">Title</th>
                       <th className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">Location</th>
                       <th className="py-3 px-4 text-left font-medium text-gray-500 text-theme-xs dark:text-gray-400">Start Date</th>
@@ -76,8 +77,9 @@ export default function EventsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {events.map(event => (
+                    {events.map((event, idx) => (
                       <tr key={event.id}>
+                        <td className="py-3 px-4 text-gray-800 dark:text-white/90">{idx + 1}</td>
                         <td className="py-3 px-4 text-gray-800 dark:text-white/90">{event.title}</td>
                         <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{event.location || '-'}</td>
                         <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{event.start_date ? new Date(event.start_date).toLocaleString() : '-'}</td>

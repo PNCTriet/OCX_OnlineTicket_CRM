@@ -13,7 +13,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     setDropdownOpen(false);
@@ -144,7 +144,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
             </svg>
           </button>
           {/* User Area */}
-          {isAuthenticated ? (
+          {user ? (
             <div className="relative" tabIndex={0}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}

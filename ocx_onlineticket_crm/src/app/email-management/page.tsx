@@ -4,7 +4,8 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { API_BASE_URL } from "@/lib/apiConfig";
 import { Tab } from "@headlessui/react";
 import { IconMail, IconTicket, IconCheck, IconX, IconUser, IconQrcode, IconClock, IconSend, IconSquareCheck, IconSearch, IconFilter } from "@tabler/icons-react";
-import { generateTicketQRCode } from "@/lib/qrCodeGenerator";
+import { useAuth } from '@/hooks/useAuth';
+
 import Image from "next/image";
 
 const RESEND_API_KEY = process.env.NEXT_PUBLIC_RESEND_API_KEY;
@@ -24,7 +25,7 @@ interface Order {
   id: string;
   user?: { email?: string; first_name?: string; last_name?: string; avatar_url?: string };
   organization?: { name?: string };
-  event?: { title?: string };
+  event?: { id?: string; title?: string };
   total_amount: number;
   status: string;
   created_at: string;
@@ -42,7 +43,81 @@ interface User {
   is_verified?: boolean;
 }
 
-// --- Helper: Send email via server-side API route ---
+// --- Helper: Send ticket email via backend API ---
+async function sendTicketEmail(orderId: string) {
+  try {
+    console.log('Sending ticket email for order:', orderId);
+
+    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+    if (!token) {
+      console.error('No access token found');
+      return false;
+    }
+
+    // Call backend API to send ticket email
+    const res = await fetch(`${API_BASE_URL}/email/send-tickets/${orderId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('API response status:', res.status);
+    
+    if (!res.ok) {
+      const errorData = await res.text();
+      console.error('API error:', res.status, errorData);
+      return false;
+    }
+
+    const result = await res.json();
+    console.log('Ticket email sent successfully:', result);
+    return true;
+  } catch (error) {
+    console.error('Failed to send ticket email:', error);
+    return false;
+  }
+}
+
+// --- Helper: Send confirmation email via backend API ---
+async function sendConfirmEmail(orderId: string) {
+  try {
+    console.log('Sending confirmation email for order:', orderId);
+
+    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+    if (!token) {
+      console.error('No access token found');
+      return false;
+    }
+
+    // Call backend API to send confirmation email
+    const res = await fetch(`${API_BASE_URL}/email/send-confirmation/${orderId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('API response status:', res.status);
+    
+    if (!res.ok) {
+      const errorData = await res.text();
+      console.error('API error:', res.status, errorData);
+      return false;
+    }
+
+    const result = await res.json();
+    console.log('Confirmation email sent successfully:', result);
+    return true;
+  } catch (error) {
+    console.error('Failed to send confirmation email:', error);
+    return false;
+  }
+}
+
+// --- Helper: Send email via server-side API route (for bulk email) ---
 async function sendResendEmail({ to, subject, html, ticketData }: { to: string; subject: string; html: string; ticketData?: any }) {
   try {
     console.log('Sending email to:', to);
@@ -80,142 +155,7 @@ async function sendResendEmail({ to, subject, html, ticketData }: { to: string; 
   }
 }
 
-// Helper function to generate HTML content for ticket
-async function generateTicketHTML(ticketData: any): Promise<string> {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Vé Điện Tử - ${ticketData.eventTitle}</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 0;
-          padding: 20px;
-          background: white;
-        }
-        .header {
-          text-align: center;
-          margin-bottom: 30px;
-          border-bottom: 2px solid #2563eb;
-          padding-bottom: 20px;
-        }
-        .title {
-          font-size: 24px;
-          color: #2563eb;
-          margin: 0;
-        }
-        .subtitle {
-          font-size: 16px;
-          color: #6b7280;
-          margin: 10px 0 0 0;
-        }
-        .section {
-          margin-bottom: 25px;
-        }
-        .section-title {
-          font-size: 18px;
-          font-weight: bold;
-          color: #1f2937;
-          margin-bottom: 15px;
-        }
-        .info-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 8px;
-          font-size: 12px;
-        }
-        .label {
-          font-weight: bold;
-          color: #374151;
-        }
-        .value {
-          color: #1f2937;
-        }
-        .ticket-item {
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 15px;
-          margin-bottom: 10px;
-        }
-        .ticket-name {
-          font-size: 14px;
-          font-weight: bold;
-          color: #1f2937;
-          margin-bottom: 5px;
-        }
-        .ticket-meta {
-          font-size: 10px;
-          color: #6b7280;
-        }
-        .footer {
-          text-align: center;
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 1px solid #e5e7eb;
-          font-size: 10px;
-          color: #6b7280;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1 class="title">🎫 Vé Điện Tử</h1>
-        <p class="subtitle">Ớt Cay Xè Studio</p>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">📋 Thông Tin Đơn Hàng</h2>
-        <div class="info-row">
-          <span class="label">Mã đơn hàng:</span>
-          <span class="value">${ticketData.orderId}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Sự kiện:</span>
-          <span class="value">${ticketData.eventTitle}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Tổ chức:</span>
-          <span class="value">${ticketData.organizationName}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Khách hàng:</span>
-          <span class="value">${ticketData.user.firstName} ${ticketData.user.lastName}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Email:</span>
-          <span class="value">${ticketData.user.email}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Tổng tiền:</span>
-          <span class="value">${ticketData.totalAmount.toLocaleString('vi-VN')} VND</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Ngày đặt:</span>
-          <span class="value">${new Date(ticketData.createdAt).toLocaleDateString('vi-VN')}</span>
-        </div>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">🎫 Chi Tiết Vé</h2>
-        ${ticketData.orderItems.map((item: any) => `
-          <div class="ticket-item">
-            <div class="ticket-name">${item.ticketName}</div>
-            <div class="ticket-meta">Số lượng: ${item.quantity} | Giá: ${item.price.toLocaleString('vi-VN')} VND</div>
-            ${item.code ? `<div class="ticket-meta">Mã vé: ${item.code}</div>` : ''}
-          </div>
-        `).join('')}
-      </div>
-      
-      <div class="footer">
-        <p>Cảm ơn bạn đã sử dụng dịch vụ của Ớt Cay Xè Studio!</p>
-        <p>Chúc bạn có một trải nghiệm tuyệt vời tại sự kiện.</p>
-      </div>
-    </body>
-    </html>
-  `;
-}
+
 
 // --- Helper: Update order sending status ---
 const updateOrderSendingStatus = async (orderId: string, status: string) => {
@@ -244,6 +184,8 @@ const updateOrderSendingStatus = async (orderId: string, status: string) => {
     return false;
   }
 };
+
+
 
 // Modal Confirm Component
 function ConfirmModal({ open, onClose, onConfirm, message, loading }: { open: boolean; onClose: () => void; onConfirm: () => void; message: string; loading?: boolean }) {
@@ -278,6 +220,11 @@ function Toast({ open, message, type, onClose }: { open: boolean; message: strin
 
 // --- Main Page ---
 export default function EmailManagementPage() {
+  const { user } = useAuth();
+  
+  // Check if user is super admin
+  const isSuperAdmin = user?.role === 'SUPERADMIN';
+  
   // Tab 1: Orders
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -306,6 +253,12 @@ export default function EmailManagementPage() {
   const [confirmBulkMailOpen, setConfirmBulkMailOpen] = useState(false);
   const [confirmOrderId, setConfirmOrderId] = useState<string|null>(null);
   const [modalLoading, setModalLoading] = useState(false);
+  
+  // Auto send settings
+  const [autoSendTickets, setAutoSendTickets] = useState(false);
+  const [autoSendConfirm, setAutoSendConfirm] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [eventSettings, setEventSettings] = useState<any>(null);
 
   // State for toast
   const [toast, setToast] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({ open: false, message: '', type: 'success' });
@@ -315,6 +268,17 @@ export default function EmailManagementPage() {
     if (toastTimeout.current) clearTimeout(toastTimeout.current);
     toastTimeout.current = setTimeout(() => setToast(t => ({ ...t, open: false })), 3000);
   }
+
+  // Copy email function
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      showToast('Email copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Failed to copy email:', error);
+      showToast('Failed to copy email!', 'error');
+    }
+  };
 
   // Fetch orders PAID
   useEffect(() => {
@@ -343,6 +307,46 @@ export default function EmailManagementPage() {
     };
     fetchOrders();
   }, []);
+
+  // Fetch event settings when event is selected
+  useEffect(() => {
+    const fetchEventSettings = async () => {
+      if (!selectedEventId) {
+        setEventSettings(null);
+        setAutoSendTickets(false);
+        setAutoSendConfirm(false);
+        return;
+      }
+
+      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/events/${selectedEventId}/settings`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (res.ok) {
+          const settings = await res.json();
+          setEventSettings(settings);
+          setAutoSendTickets(settings.auto_send_ticket_email || false);
+          setAutoSendConfirm(settings.auto_send_confirm_email || false);
+        } else {
+          console.error('Failed to fetch event settings');
+          setEventSettings(null);
+          setAutoSendTickets(false);
+          setAutoSendConfirm(false);
+        }
+      } catch (error) {
+        console.error('Error fetching event settings:', error);
+        setEventSettings(null);
+        setAutoSendTickets(false);
+        setAutoSendConfirm(false);
+      }
+    };
+
+    fetchEventSettings();
+  }, [selectedEventId]);
 
   // Fetch users
   useEffect(() => {
@@ -413,11 +417,39 @@ export default function EmailManagementPage() {
       setSelectedOrderIds(filteredOrderIds);
     }
   };
+  // --- Helper: Update event settings ---
+  const updateEventSettings = async (eventId: string, settings: { auto_send_ticket_email: boolean; auto_send_confirm_email: boolean }) => {
+    try {
+      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+      if (!token) return false;
+
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/settings`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(settings),
+      });
+
+      if (res.ok) {
+        const updatedSettings = await res.json();
+        setEventSettings(updatedSettings);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to update event settings:", error);
+      return false;
+    }
+  };
+
   const handleSendTickets = async (orderIds?: string[]) => {
     const ids = orderIds || selectedOrderIds;
     let successCount = 0;
     let failCount = 0;
     const updates: typeof sendingOrder = {};
+    
     for (const oid of ids) {
       updates[oid] = "pending";
       setSendingOrder((prev) => ({ ...prev, ...updates }));
@@ -425,89 +457,19 @@ export default function EmailManagementPage() {
       // Update status to SENDING
       await updateOrderSendingStatus(oid, "SENDING");
       
-      const order = orders.find((o) => o.id === oid);
-      if (!order || !order.user?.email) {
-        updates[oid] = "fail";
-        setSendingOrder((prev) => ({ ...prev, ...updates }));
-        await updateOrderSendingStatus(oid, "FAILED");
-        failCount++;
-        continue;
+      // Send based on auto settings
+      let ok = false;
+      if (autoSendTickets) {
+        // Send ticket email
+        ok = await sendTicketEmail(oid);
+      } else if (autoSendConfirm) {
+        // Send confirmation email
+        ok = await sendConfirmEmail(oid);
+      } else {
+        // Default: send ticket email
+        ok = await sendTicketEmail(oid);
       }
-      // Generate QR codes for ticket items
-      const orderItemsWithQR = await Promise.all(
-        (order.order_items || []).map(async (item) => {
-          let qrCode = "";
-          if (item.code) {
-            try {
-              qrCode = await generateTicketQRCode(item.code);
-            } catch (error) {
-              console.error('Error generating QR code for item:', item.code, error);
-            }
-          }
-          
-          return {
-            ticketName: item.ticket?.name || "Vé",
-            quantity: item.quantity,
-            price: Number(item.price),
-            code: item.code || "",
-            qrCode: qrCode,
-          };
-        })
-      );
-
-      // Prepare ticket data for PDF generation
-      const ticketData = {
-        orderId: order.id,
-        eventTitle: order.event?.title || "Sự kiện",
-        organizationName: order.organization?.name || "N/A",
-        totalAmount: Number(order.total_amount),
-        createdAt: order.created_at,
-        user: {
-          firstName: order.user?.first_name || "",
-          lastName: order.user?.last_name || "",
-          email: order.user?.email || "",
-        },
-        orderItems: orderItemsWithQR,
-      };
-
-      // Compose email
-      const subject = `Vé điện tử - ${order.event?.title || "Sự kiện"} - Order #${order.id}`;
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #2563eb; margin: 0; font-size: 24px;">🎫 Vé Điện Tử</h1>
-            <p style="color: #6b7280; margin: 10px 0 0 0;">Ớt Cay Xè Studio</p>
-          </div>
-          
-          <div style="margin-bottom: 25px;">
-            <h2 style="color: #1f2937; margin: 0 0 15px 0; font-size: 20px;">Xin chào ${order.user?.first_name || ""} ${order.user?.last_name || ""}!</h2>
-            <p style="color: #374151; line-height: 1.6; margin: 0;">
-              Cảm ơn bạn đã đặt vé cho sự kiện <strong>${order.event?.title || "Sự kiện"}</strong>.
-              Vui lòng xem file PDF đính kèm để xem chi tiết vé của bạn.
-            </p>
-          </div>
-          
-          <div style="background-color: #dbeafe; border-left: 4px solid #2563eb; padding: 15px; margin-bottom: 25px;">
-            <h4 style="margin: 0 0 10px 0; color: #1e40af; font-size: 16px;">📱 Hướng Dẫn Sử Dụng</h4>
-            <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
-              <li>Lưu file PDF này để làm bằng chứng đặt vé</li>
-              <li>Hiển thị QR Code khi check-in tại sự kiện</li>
-              <li>Mỗi QR Code chỉ sử dụng được một lần</li>
-              <li>Liên hệ hỗ trợ nếu có vấn đề</li>
-            </ul>
-          </div>
-          
-          <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-            <p style="color: #6b7280; margin: 0; font-size: 14px;">
-              Cảm ơn bạn đã sử dụng dịch vụ của <strong>Ớt Cay Xè Studio</strong>!<br>
-              Chúc bạn có một trải nghiệm tuyệt vời tại sự kiện.
-            </p>
-          </div>
-        </div>
-      `;
       
-      // Send email with PDF attachment
-      const ok = await sendResendEmail({ to: order.user.email, subject, html, ticketData });
       updates[oid] = ok ? "success" : "fail";
       setSendingOrder((prev) => ({ ...prev, ...updates }));
       
@@ -515,10 +477,11 @@ export default function EmailManagementPage() {
       await updateOrderSendingStatus(oid, ok ? "SENT" : "FAILED");
       if (ok) successCount++; else failCount++;
     }
+    
     if (ids.length === 1) {
-      showToast(successCount ? 'Gửi vé thành công!' : 'Gửi vé thất bại!', successCount ? 'success' : 'error');
+      showToast(successCount ? 'Email sent successfully!' : 'Failed to send email!', successCount ? 'success' : 'error');
     } else {
-      showToast(`Đã gửi thành công ${successCount}/${ids.length} vé. ${failCount ? failCount + ' thất bại.' : ''}`, successCount === ids.length ? 'success' : 'error');
+      showToast(`Successfully sent ${successCount}/${ids.length} emails. ${failCount ? failCount + ' failed.' : ''}`, successCount === ids.length ? 'success' : 'error');
     }
   };
 
@@ -553,9 +516,9 @@ export default function EmailManagementPage() {
     
     // Show toast notification
     if (selectedUserIds.length === 1) {
-      showToast(successCount ? 'Gửi email thành công!' : 'Gửi email thất bại!', successCount ? 'success' : 'error');
+      showToast(successCount ? 'Email sent successfully!' : 'Failed to send email!', successCount ? 'success' : 'error');
     } else {
-      showToast(`Đã gửi thành công ${successCount}/${selectedUserIds.length} email. ${failCount ? failCount + ' thất bại.' : ''}`, successCount === selectedUserIds.length ? 'success' : 'error');
+      showToast(`Successfully sent ${successCount}/${selectedUserIds.length} emails. ${failCount ? failCount + ' failed.' : ''}`, successCount === selectedUserIds.length ? 'success' : 'error');
     }
   };
 
@@ -568,8 +531,8 @@ export default function EmailManagementPage() {
         <Tab.Group>
           <Tab.List className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
             {[
-              { label: <><IconTicket className="w-5 h-5 inline mr-1" /> Gửi vé điện tử</>, key: 0 },
-              { label: <><IconUser className="w-5 h-5 inline mr-1" /> Gửi email hàng loạt</>, key: 1 },
+              { label: <><IconTicket className="w-5 h-5 inline mr-1" /> Send Ticket Emails</>, key: 0 },
+              { label: <><IconUser className="w-5 h-5 inline mr-1" /> Bulk Email</>, key: 1 },
             ].map((tab, idx) => (
               <Tab key={tab.key} className={({ selected }) =>
                 `px-5 py-2.5 text-sm font-semibold rounded-t-lg focus:outline-none transition-all duration-200
@@ -583,7 +546,7 @@ export default function EmailManagementPage() {
             ))}
           </Tab.List>
           <Tab.Panels>
-            {/* Tab 1: Gửi vé điện tử */}
+            {/* Tab 1: Send Ticket Emails */}
             <Tab.Panel>
               <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] mb-6">
                 {/* Filter Controls */}
@@ -594,7 +557,7 @@ export default function EmailManagementPage() {
                       <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Tìm kiếm theo email, tên, event, organization..."
+                        placeholder="Search by email, name, event, organization..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -606,10 +569,15 @@ export default function EmailManagementPage() {
                       {/* Event Filter */}
                       <select
                         value={selectedEvent}
-                        onChange={(e) => setSelectedEvent(e.target.value)}
+                        onChange={(e) => {
+                          setSelectedEvent(e.target.value);
+                          // Find event ID for settings
+                          const event = orders.find(o => o.event?.title === e.target.value);
+                          setSelectedEventId(event?.event?.id || "");
+                        }}
                         className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="">Tất cả Events</option>
+                        <option value="">All Events</option>
                         {events.map(event => (
                           <option key={event} value={event}>{event}</option>
                         ))}
@@ -621,7 +589,7 @@ export default function EmailManagementPage() {
                         onChange={(e) => setSelectedOrganization(e.target.value)}
                         className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="">Tất cả Organizations</option>
+                        <option value="">All Organizations</option>
                         {organizations.map(org => (
                           <option key={org} value={org}>{org}</option>
                         ))}
@@ -633,7 +601,7 @@ export default function EmailManagementPage() {
                         onChange={(e) => setSelectedSendingStatus(e.target.value)}
                         className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="">Tất cả Status</option>
+                        <option value="">All Status</option>
                         {sendingStatuses.map(status => (
                           <option key={status} value={status}>{status}</option>
                         ))}
@@ -659,7 +627,7 @@ export default function EmailManagementPage() {
                   
                   {/* Results Count */}
                   <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                    Hiển thị {filteredOrders.length} / {orders.length} đơn hàng
+                    Showing {filteredOrders.length} / {orders.length} orders
                   </div>
                 </div>
                 
@@ -669,7 +637,7 @@ export default function EmailManagementPage() {
                     className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded text-sm font-medium h-10"
                   >
                     <IconSquareCheck className="w-5 h-5" />
-                    {selectedOrderIds.length === filteredOrders.length ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                    {selectedOrderIds.length === filteredOrders.length ? "Deselect All" : "Select All"}
                   </button>
                   <button
                     onClick={() => setConfirmBulkOpen(true)}
@@ -677,15 +645,97 @@ export default function EmailManagementPage() {
                     disabled={selectedOrderIds.length === 0}
                   >
                     <IconSend className="w-5 h-5" />
-                    Gửi ticket
+                    Send Tickets
                   </button>
+                  
+                  {/* Auto Send Settings */}
+                  <div className="flex items-center gap-4 ml-auto">
+                    {selectedEventId ? (
+                      isSuperAdmin ? (
+                        <>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={autoSendTickets}
+                              onChange={async (e) => {
+                                const newValue = e.target.checked;
+                                setAutoSendTickets(newValue);
+                                
+                                if (selectedEventId && eventSettings) {
+                                  const success = await updateEventSettings(selectedEventId, {
+                                    auto_send_ticket_email: newValue,
+                                    auto_send_confirm_email: autoSendConfirm
+                                  });
+                                
+                                  if (success) {
+                                    showToast('Event settings updated successfully!', 'success');
+                                  } else {
+                                    showToast('Failed to update event settings!', 'error');
+                                    // Revert the change if update failed
+                                    setAutoSendTickets(!newValue);
+                                  }
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span>Auto Send Tickets</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={autoSendConfirm}
+                              onChange={async (e) => {
+                                const newValue = e.target.checked;
+                                setAutoSendConfirm(newValue);
+                                
+                                if (selectedEventId && eventSettings) {
+                                  const success = await updateEventSettings(selectedEventId, {
+                                    auto_send_ticket_email: autoSendTickets,
+                                    auto_send_confirm_email: newValue
+                                  });
+                                
+                                  if (success) {
+                                    showToast('Event settings updated successfully!', 'success');
+                                  } else {
+                                    showToast('Failed to update event settings!', 'error');
+                                    // Revert the change if update failed
+                                    setAutoSendConfirm(!newValue);
+                                  }
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span>Auto Send Confirm</span>
+                          </label>
+                        </>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                          {eventSettings && (
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                              <span className={`px-2 py-1 rounded ${eventSettings.auto_send_ticket_email ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                Auto Tickets: {eventSettings.auto_send_ticket_email ? 'ON' : 'OFF'}
+                              </span>
+                              <span className={`px-2 py-1 rounded ${eventSettings.auto_send_confirm_email ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                Auto Confirm: {eventSettings.auto_send_confirm_email ? 'ON' : 'OFF'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {isSuperAdmin ? 'Select an event to configure auto-send settings' : 'Select an event to view auto-send settings'}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="p-5 border-t border-gray-100 dark:border-gray-800 sm:p-6 overflow-x-auto">
-                  <table className="table-fixed w-full min-w-[1300px] divide-y divide-gray-100 dark:divide-gray-800">
+                  <table className="table-fixed w-full min-w-[1200px] divide-y divide-gray-100 dark:divide-gray-800">
                     <thead>
                       <tr className="border-gray-100 border-y dark:border-gray-800">
+                        <th className="w-[40px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">#</th>
                         <th className="w-[40px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80"></th>
-                        <th className="w-[300px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">User</th>
+                        <th className="w-[280px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">User</th>
                         <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Event</th>
                         <th className="w-[180px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Organization</th>
                         <th className="w-[120px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Total</th>
@@ -697,19 +747,33 @@ export default function EmailManagementPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                      {filteredOrders.map((order) => (
+                      {filteredOrders.map((order, idx) => (
                         <tr key={order.id}>
+                          <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle">
+                            {idx + 1}
+                          </td>
                           <td className="py-3 px-4 align-middle">
                             <input type="checkbox" checked={selectedOrderIds.includes(order.id)} onChange={() => handleSelectOrder(order.id)} />
                           </td>
-                          <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[280px]">
+                          <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[260px]">
                             <div className="flex items-center gap-2">
                               {order.user?.avatar_url ? (
                                 <Image src={order.user.avatar_url} alt="avatar" width={32} height={32} className="rounded-full object-cover bg-gray-200" />
                               ) : (
                                 <IconUser className="w-6 h-6 text-gray-400" />
                               )}
-                              <span className="max-w-[250px] whitespace-nowrap text-ellipsis">{order.user?.email || "N/A"}</span>
+                                                              <button
+                                  onClick={() => copyEmail(order.user?.email || "")}
+                                  className="max-w-[220px] text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer group relative"
+                                  title={`Click to copy: ${order.user?.email || "N/A"}`}
+                                >
+                                  <span className="block truncate group-hover:underline">
+                                    {order.user?.email || "N/A"}
+                                  </span>
+                                  <div className="absolute left-0 top-full z-10 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                    {order.user?.email || "N/A"}
+                                  </div>
+                                </button>
                             </div>
                           </td>
                           <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[150px]">
@@ -744,13 +808,15 @@ export default function EmailManagementPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4 align-middle">
-                            <button
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-sm transition-colors"
-                              onClick={() => setConfirmOrderId(order.id)}
-                              disabled={sendingOrder[order.id] === "pending"}
-                            >
-                              Gửi lại vé
-                            </button>
+                            {(order.sending_status === 'SENT' || order.sending_status === 'FAILED') && (
+                              <button
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-sm transition-colors"
+                                onClick={() => setConfirmOrderId(order.id)}
+                                disabled={sendingOrder[order.id] === "pending"}
+                              >
+                                Resend Ticket
+                              </button>
+                            )}
                           </td>
                           <td className="py-3 px-4 align-middle">
                             {order.sending_status === 'SENT' && (
@@ -781,7 +847,7 @@ export default function EmailManagementPage() {
                 </div>
               </div>
             </Tab.Panel>
-            {/* Tab 2: Gửi email hàng loạt */}
+            {/* Tab 2: Bulk Email */}
             <Tab.Panel>
               <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] mb-6">
                 {/* Filter Controls */}
@@ -792,7 +858,7 @@ export default function EmailManagementPage() {
                       <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Tìm kiếm theo email, tên, SĐT..."
+                        placeholder="Search by email, name, phone..."
                         value={userSearchTerm}
                         onChange={(e) => setUserSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -807,7 +873,7 @@ export default function EmailManagementPage() {
                         onChange={(e) => setSelectedUserRole(e.target.value)}
                         className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="">Tất cả Roles</option>
+                        <option value="">All Roles</option>
                         {userRoles.map(role => (
                           <option key={role} value={role}>{role}</option>
                         ))}
@@ -819,7 +885,7 @@ export default function EmailManagementPage() {
                         onChange={(e) => setSelectedUserVerified(e.target.value)}
                         className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="">Tất cả Verified</option>
+                        <option value="">All Verified</option>
                         <option value="true">Verified</option>
                         <option value="false">Unverified</option>
                       </select>
@@ -843,7 +909,7 @@ export default function EmailManagementPage() {
                   
                   {/* Results Count */}
                   <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                    Hiển thị {filteredUsers.length} / {users.length} users
+                    Showing {filteredUsers.length} / {users.length} users
                   </div>
                 </div>
                 
@@ -853,7 +919,7 @@ export default function EmailManagementPage() {
                     className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded text-sm font-medium h-10"
                   >
                     <IconSquareCheck className="w-5 h-5" />
-                    {selectedUserIds.length === filteredUsers.length ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                    {selectedUserIds.length === filteredUsers.length ? "Deselect All" : "Select All"}
                   </button>
                   <button 
                     onClick={() => setConfirmBulkMailOpen(true)}
@@ -861,22 +927,23 @@ export default function EmailManagementPage() {
                     disabled={selectedUserIds.length === 0 || !bulkMailContent}
                   >
                     <IconSend className="w-5 h-5" />
-                    Gửi email
+                    Send Email
                   </button>
                 </div>
                 <div className="p-5 border-t border-gray-100 dark:border-gray-800 sm:p-6">
                   <div className="mb-4">
-                    <label className="block font-medium mb-1">Tiêu đề email</label>
+                    <label className="block font-medium mb-1">Email Subject</label>
                     <input type="text" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded mb-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value={bulkMailSubject} onChange={e => setBulkMailSubject(e.target.value)} />
-                    <label className="block font-medium mb-1">Nội dung email (HTML)</label>
-                    <textarea className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded min-h-[120px] bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value={bulkMailContent} onChange={e => setBulkMailContent(e.target.value)} placeholder="Nhập nội dung email (có thể dùng HTML)"></textarea>
+                    <label className="block font-medium mb-1">Email Content (HTML)</label>
+                    <textarea className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded min-h-[120px] bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value={bulkMailContent} onChange={e => setBulkMailContent(e.target.value)} placeholder="Enter email content (HTML supported)"></textarea>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="table-fixed w-full min-w-[900px] divide-y divide-gray-100 dark:divide-gray-800">
+                    <table className="table-fixed w-full min-w-[800px] divide-y divide-gray-100 dark:divide-gray-800">
                       <thead>
                         <tr className="border-gray-100 border-y dark:border-gray-800">
+                          <th className="w-[40px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">#</th>
                           <th className="w-[40px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80"></th>
-                          <th className="w-[250px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Email</th>
+                          <th className="w-[220px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Email</th>
                           <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Họ tên</th>
                           <th className="w-[120px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">SĐT</th>
                           <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Role</th>
@@ -885,19 +952,33 @@ export default function EmailManagementPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {filteredUsers.map((user) => (
+                        {filteredUsers.map((user, idx) => (
                           <tr key={user.id}>
+                            <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle">
+                              {idx + 1}
+                            </td>
                             <td className="py-3 px-4 align-middle">
                               <input type="checkbox" checked={selectedUserIds.includes(user.id)} onChange={() => handleSelectUser(user.id)} />
                             </td>
-                            <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[250px]">
+                            <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[220px]">
                               <div className="flex items-center gap-2">
                                 {user.avatar_url ? (
                                   <Image src={user.avatar_url} alt="avatar" width={32} height={32} className="rounded-full object-cover bg-gray-200" />
                                 ) : (
                                   <IconUser className="w-6 h-6 text-gray-400" />
                                 )}
-                                <span>{user.email}</span>
+                                <button
+                                  onClick={() => copyEmail(user.email)}
+                                  className="max-w-[180px] text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer group relative"
+                                  title={`Click to copy: ${user.email}`}
+                                >
+                                  <span className="block truncate group-hover:underline">
+                                    {user.email}
+                                  </span>
+                                  <div className="absolute left-0 top-full z-10 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                    {user.email}
+                                  </div>
+                                </button>
                               </div>
                             </td>
                             <td className="py-3 px-4 text-gray-800 dark:text-white/90 align-middle min-w-[150px]">{user.first_name || ""} {user.last_name || ""}</td>
@@ -918,9 +999,9 @@ export default function EmailManagementPage() {
                               </span>
                             </td>
                             <td className="py-3 px-4 align-middle">
-                              {sendingUser[user.id] === "success" && <span className="text-green-600 flex items-center gap-1"><IconCheck className="w-4 h-4" /> Đã gửi</span>}
-                              {sendingUser[user.id] === "fail" && <span className="text-red-600 flex items-center gap-1"><IconX className="w-4 h-4" /> Lỗi</span>}
-                              {sendingUser[user.id] === "pending" && <span className="text-blue-600 flex items-center gap-1">Đang gửi...</span>}
+                              {sendingUser[user.id] === "success" && <span className="text-green-600 flex items-center gap-1"><IconCheck className="w-4 h-4" /> Sent</span>}
+                              {sendingUser[user.id] === "fail" && <span className="text-red-600 flex items-center gap-1"><IconX className="w-4 h-4" /> Error</span>}
+                              {sendingUser[user.id] === "pending" && <span className="text-blue-600 flex items-center gap-1">Sending...</span>}
                             </td>
                           </tr>
                         ))}
@@ -941,7 +1022,7 @@ export default function EmailManagementPage() {
             setModalLoading(false);
             setConfirmBulkOpen(false);
           }}
-          message={`Bạn chắc chắn muốn gửi ${selectedOrderIds.length} email vé điện tử?`}
+          message={`Are you sure you want to send ${selectedOrderIds.length} ticket emails?`}
           loading={modalLoading}
         />
         <ConfirmModal
@@ -955,7 +1036,7 @@ export default function EmailManagementPage() {
               setConfirmOrderId(null);
             }
           }}
-          message={`Bạn chắc chắn muốn gửi lại vé cho đơn hàng này?`}
+          message={`Are you sure you want to resend the ticket for this order?`}
           loading={modalLoading}
         />
         <ConfirmModal
@@ -967,7 +1048,7 @@ export default function EmailManagementPage() {
             setModalLoading(false);
             setConfirmBulkMailOpen(false);
           }}
-          message={`Bạn chắc chắn muốn gửi ${selectedUserIds.length} email hàng loạt?`}
+          message={`Are you sure you want to send ${selectedUserIds.length} bulk emails?`}
           loading={modalLoading}
         />
         <Toast open={toast.open} message={toast.message} type={toast.type} onClose={() => setToast(t => ({ ...t, open: false }))} />
