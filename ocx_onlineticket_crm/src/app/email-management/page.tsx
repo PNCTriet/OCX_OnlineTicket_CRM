@@ -193,13 +193,13 @@ function ConfirmModal({ open, onClose, onConfirm, message, loading }: { open: bo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 min-w-[320px] max-w-[90vw]">
-        <div className="mb-6 text-lg font-semibold text-gray-800 dark:text-white">Xác nhận gửi email</div>
+        <div className="mb-6 text-lg font-semibold text-gray-800 dark:text-white">Confirm Send Email</div>
         <div className="mb-6 text-gray-700 dark:text-gray-200">{message}</div>
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-medium" disabled={loading}>Huỷ</button>
+          <button onClick={onClose} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-medium" disabled={loading}>Cancel</button>
           <button onClick={onConfirm} className="px-4 py-2 rounded bg-blue-600 text-white font-semibold flex items-center gap-2 disabled:opacity-60" disabled={loading}>
             {loading && <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>}
-            Xác nhận
+            Confirm
           </button>
         </div>
       </div>
@@ -457,18 +457,8 @@ export default function EmailManagementPage() {
       // Update status to SENDING
       await updateOrderSendingStatus(oid, "SENDING");
       
-      // Send based on auto settings
-      let ok = false;
-      if (autoSendTickets) {
-        // Send ticket email
-        ok = await sendTicketEmail(oid);
-      } else if (autoSendConfirm) {
-        // Send confirmation email
-        ok = await sendConfirmEmail(oid);
-      } else {
-        // Default: send ticket email
-        ok = await sendTicketEmail(oid);
-      }
+      // Always send ticket email when manually triggered
+      const ok = await sendTicketEmail(oid);
       
       updates[oid] = ok ? "success" : "fail";
       setSendingOrder((prev) => ({ ...prev, ...updates }));
@@ -479,9 +469,9 @@ export default function EmailManagementPage() {
     }
     
     if (ids.length === 1) {
-      showToast(successCount ? 'Email sent successfully!' : 'Failed to send email!', successCount ? 'success' : 'error');
+      showToast(successCount ? 'Ticket email sent successfully!' : 'Failed to send ticket email!', successCount ? 'success' : 'error');
     } else {
-      showToast(`Successfully sent ${successCount}/${ids.length} emails. ${failCount ? failCount + ' failed.' : ''}`, successCount === ids.length ? 'success' : 'error');
+      showToast(`Successfully sent ${successCount}/${ids.length} ticket emails. ${failCount ? failCount + ' failed.' : ''}`, successCount === ids.length ? 'success' : 'error');
     }
   };
 
@@ -789,7 +779,7 @@ export default function EmailManagementPage() {
                             <ul className="list-disc ml-4">
                               {(order.order_items || []).map((item) => (
                                 <li key={item.id}>
-                                  <span className="font-semibold">{item.ticket?.name || "Vé"}</span> x{item.quantity}
+                                  <span className="font-semibold">{item.ticket?.name || "Ticket"}</span> x{item.quantity}
                                   {item.qr_code && (
                                     <span className="inline-block ml-2"><IconQrcode className="w-5 h-5 inline" /></span>
                                   )}
@@ -944,11 +934,11 @@ export default function EmailManagementPage() {
                           <th className="w-[40px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">#</th>
                           <th className="w-[40px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80"></th>
                           <th className="w-[220px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Email</th>
-                          <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Họ tên</th>
-                          <th className="w-[120px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">SĐT</th>
+                          <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Name</th>
+                          <th className="w-[120px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Phone</th>
                           <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Role</th>
                           <th className="w-[100px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Verified</th>
-                          <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Sending status</th>
+                          <th className="w-[150px] py-3 px-4 text-left font-semibold text-gray-700 text-sm dark:text-white/80">Sending Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
